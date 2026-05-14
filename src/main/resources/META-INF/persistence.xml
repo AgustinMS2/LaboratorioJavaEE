@@ -5,9 +5,9 @@
 
     <persistence-unit name="tallerPU">
 
-        <class>org.tallerJava.moduloClientes.dominio.Cliente</class>
-        <class>org.tallerJava.moduloClientes.dominio.ClienteComun</class>
-        <class>org.tallerJava.moduloClientes.dominio.ClienteProfesional</class>
+        <class>org.tallerJava.moduloCargas.dominio.repositorio.Cliente</class>
+        <class>org.tallerJava.moduloCargas.dominio.repositorio.ClienteComun</class>
+        <class>org.tallerJava.moduloCargas.dominio.repositorio.ClienteProfesional</class>
 
         <properties>
 
