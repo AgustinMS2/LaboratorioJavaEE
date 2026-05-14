@@ -1,15 +1,30 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
+
+import jakarta.persistence.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 public abstract class Cliente {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     private String nombre;
+
     private String apellido;
+
     private String email;
+
     private String telefono;
 
+    @OneToMany
     private List<MedioPago> mediosPago;
+
+    @OneToMany
     private List<Reclamo> reclamos;
 
     public Cliente() {
@@ -17,8 +32,11 @@ public abstract class Cliente {
         this.reclamos = new ArrayList<>();
     }
 
-    public Cliente(Long id, String nombre, String apellido,
-                   String email, String telefono) {
+    public Cliente(Long id,
+                   String nombre,
+                   String apellido,
+                   String email,
+                   String telefono) {
 
         this.id = id;
         this.nombre = nombre;
@@ -82,7 +100,15 @@ public abstract class Cliente {
         return mediosPago;
     }
 
+    public void setMediosPago(List<MedioPago> mediosPago) {
+        this.mediosPago = mediosPago;
+    }
+
     public List<Reclamo> getReclamos() {
         return reclamos;
+    }
+
+    public void setReclamos(List<Reclamo> reclamos) {
+        this.reclamos = reclamos;
     }
 }

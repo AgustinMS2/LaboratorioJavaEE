@@ -1,8 +1,10 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
 
-import java.time.LocalDate;
+import jakarta.persistence.Entity;
 
-public class Tarjeta extends MedioPago{
+@Entity
+public class Tarjeta extends MedioPago {
+
     private String numero;
 
     private String titular;
@@ -12,6 +14,10 @@ public class Tarjeta extends MedioPago{
     private String codigoSeguridad;
 
     private String marca;
+
+    public Tarjeta() {
+        super();
+    }
 
     public Tarjeta(Long id,
                    String numero,
@@ -68,5 +74,4 @@ public class Tarjeta extends MedioPago{
     public void setMarca(String marca) {
         this.marca = marca;
     }
-
 }

@@ -1,15 +1,20 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
 
 import org.tallerJava.moduloCargas.dominio.repositorio.Cliente;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-
+import jakarta.persistence.*;
+@Entity
 public class Carga {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne
     private Cliente cliente;
 
     private LocalDateTime fechaInicio;
+
     private LocalDateTime fechaFin;
 
     private Double consumoKwh;

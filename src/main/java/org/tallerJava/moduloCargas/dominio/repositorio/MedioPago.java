@@ -1,7 +1,13 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
 
+import jakarta.persistence.*;
+
+@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
 public abstract class MedioPago {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     public MedioPago() {

@@ -1,15 +1,19 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
 
+@Entity
 public class Cargador {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String codigo;
 
     private Double potenciaKw;
 
+    @Enumerated(EnumType.STRING)
     private EstadoCargador estado;
 
     public Cargador() {
@@ -66,5 +70,4 @@ public class Cargador {
     public void setEstado(EstadoCargador estado) {
         this.estado = estado;
     }
-
 }

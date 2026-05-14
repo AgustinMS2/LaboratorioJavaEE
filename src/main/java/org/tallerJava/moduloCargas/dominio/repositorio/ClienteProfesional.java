@@ -1,6 +1,9 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
 
-public class ClienteProfesional extends Cliente{
+import jakarta.persistence.Entity;
+
+@Entity
+public class ClienteProfesional extends Cliente {
 
     private String empresa;
 
@@ -39,5 +42,4 @@ public class ClienteProfesional extends Cliente{
     public void setRut(String rut) {
         this.rut = rut;
     }
-
 }

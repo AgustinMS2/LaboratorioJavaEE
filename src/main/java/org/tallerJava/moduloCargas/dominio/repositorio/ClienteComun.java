@@ -1,6 +1,10 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
 
-public class ClienteComun extends Cliente{
+import jakarta.persistence.Entity;
+
+@Entity
+public class ClienteComun extends Cliente {
+
     public ClienteComun() {
         super();
     }

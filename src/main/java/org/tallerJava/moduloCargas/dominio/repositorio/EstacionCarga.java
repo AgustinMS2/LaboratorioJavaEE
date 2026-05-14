@@ -1,8 +1,15 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
+
+import jakarta.persistence.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
 public class EstacionCarga {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String nombre;
@@ -11,6 +18,7 @@ public class EstacionCarga {
 
     private String ciudad;
 
+    @OneToMany
     private List<Cargador> cargadores;
 
     public EstacionCarga() {
@@ -18,9 +26,9 @@ public class EstacionCarga {
     }
 
     public EstacionCarga(Long id,
-                    String nombre,
-                    String direccion,
-                    String ciudad) {
+                         String nombre,
+                         String direccion,
+                         String ciudad) {
 
         this.id = id;
         this.nombre = nombre;

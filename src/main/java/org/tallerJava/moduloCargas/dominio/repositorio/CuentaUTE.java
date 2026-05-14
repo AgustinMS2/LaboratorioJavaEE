@@ -1,6 +1,10 @@
 package org.tallerJava.moduloCargas.dominio.repositorio;
 
-public class CuentaUTE extends MedioPago{
+import jakarta.persistence.Entity;
+
+@Entity
+public class CuentaUTE extends MedioPago {
+
     private String numeroCuenta;
 
     private String titular;
