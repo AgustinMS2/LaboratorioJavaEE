@@ -1,4 +1,4 @@
 package org.tallerJava.moduloCargas.aplicacion;
 
-public interface ServicioCargas {
+public interface ServicioCarga {
 }
