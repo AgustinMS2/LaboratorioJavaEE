@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\14gab\\\\LaboratorioJavaEE\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\14gab\\\\LaboratorioJavaEE\" -Recurse | ForEach-Object { $_.FullName })",
+      "Skill(anthropic-skills:pdf)",
+      "Skill(anthropic-skills:pdf:*)",
+      "Bash(python -c ' *)",
+      "Bash(py --version)",
+      "PowerShell(Invoke-WebRequest -Uri \"https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/9.1.0/mysql-connector-j-9.1.0.jar\" -OutFile \"C:\\\\Users\\\\14gab\\\\LaboratorioJavaEE\\\\mysql-connector-j-9.1.0.jar\" -UseBasicParsing)"
+    ]
+  }
+}
