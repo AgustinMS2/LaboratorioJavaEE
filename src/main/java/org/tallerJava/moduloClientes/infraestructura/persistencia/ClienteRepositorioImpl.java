@@ -30,9 +30,9 @@ public class ClienteRepositorioImpl implements ClienteRepositorio {
     }
 
     @Override
-    public Optional<Cliente> buscarPorEmail(String email) {
-        return em.createQuery("SELECT c FROM Cliente c WHERE LOWER(c.email) = LOWER(:email)", Cliente.class)
-                .setParameter("email", email)
+    public Optional<Cliente> buscarPorCedula(String cedula) {
+        return em.createQuery("SELECT c FROM Cliente c WHERE c.cedula = :cedula", Cliente.class)
+                .setParameter("cedula", cedula)
                 .getResultStream()
                 .findFirst();
     }

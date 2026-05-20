@@ -8,6 +8,6 @@ import java.util.Optional;
 public interface ClienteRepositorio {
     Cliente guardar(Cliente cliente);
     Optional<Cliente> buscarPorId(Long id);
-    Optional<Cliente> buscarPorEmail(String email);
+    Optional<Cliente> buscarPorCedula(String cedula);
     List<Cliente> obtenerTodos();
 }

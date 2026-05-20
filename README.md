@@ -1,6 +1,6 @@
 # Gestión de Movilidad Eléctrica — Taller Java 2026
 
-Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jakarta EE 10 sobre WildFly, siguiendo una arquitectura modular inspirada en microservicios.
+Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jakarta EE 10 sobre WildFly, siguiendo una arquitectura monolítica modular.
 
 ---
 
@@ -13,6 +13,8 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
 5. [Módulos y casos de uso](#módulos-y-casos-de-uso)
 6. [Configuración del entorno](#configuración-del-entorno)
 7. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
+8. [Tecnologías](#tecnologías)
+9. [Problemas frecuentes](#problemas-frecuentes)
 
 ---
 
@@ -26,23 +28,25 @@ El sistema permite gestionar la carga de vehículos eléctricos en estaciones di
 
 El proyecto sigue una **arquitectura monolítica modular**, donde cada módulo está diseñado para ser independiente y potencialmente evolucionar hacia un microservicio.
 
-Los módulos se comunican entre sí únicamente a través de interfaces definidas en el paquete `aplicacion/`, respetando el principio de bajo acoplamiento.
+Los módulos se comunican entre sí únicamente a través de las interfaces definidas en sus paquetes `aplicacion/`, respetando el principio de bajo acoplamiento. Cuando `moduloCargas` necesita cobrar un pago, invoca la interfaz `ServicioPago` del `moduloPagos` sin conocer su implementación interna.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      WildFly 27                         │
-│                                                         │
-│   ┌──────────────┐  ┌──────────────┐  ┌─────────────┐  │
-│   │moduloClientes│  │ moduloCargas │  │moduloPagos  │  │
-│   └──────┬───────┘  └──────┬───────┘  └──────┬──────┘  │
-│          │                 │ invoca           │         │
-│          └─────────────────┴──────────────────┘         │
-│                            │                            │
-│                     ┌──────▼──────┐                     │
-│                     │  MariaDB    │                     │
-│                     │ tallerJava  │                     │
-│                     └─────────────┘                     │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                         WildFly 27                           │
+│                                                              │
+│  ┌───────────────┐   ┌───────────────┐   ┌───────────────┐  │
+│  │moduloClientes │   │ moduloCargas  │   │ moduloPagos   │  │
+│  │               │   │               │──▶│               │  │
+│  │  ServicioClien│   │  ServicioCarga│   │  ServicioPago │  │
+│  └───────────────┘   └───────────────┘   └───────────────┘  │
+│          │                   │                   │           │
+│          └───────────────────┴───────────────────┘           │
+│                              │                               │
+│                    ┌─────────▼────────┐                      │
+│                    │    MariaDB       │                      │
+│                    │   tallerJava     │                      │
+│                    └──────────────────┘                      │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -54,22 +58,23 @@ Cada módulo sigue la misma estructura interna:
 ```
 moduloXxx/
 ├── dominio/
-│   ├── repositorio/       → interfaces de persistencia
-│   └── Entidad.java       → clases de dominio con lógica de negocio
+│   ├── repositorio/            → interfaces de persistencia (contratos)
+│   └── Entidad.java            → clases de dominio con lógica de negocio
 ├── aplicacion/
-│   ├── ServicioXxx.java   → interfaz del servicio (casos de uso)
+│   ├── ServicioXxx.java        → interfaz pública del módulo (casos de uso)
 │   └── impl/
-│       └── ServicioXxxImpl.java  → implementación (@Transactional)
-├── interfase/             → interfaces remotas e inter-módulo
+│       └── ServicioXxxImpl.java → implementación (@ApplicationScoped @Transactional)
+├── interfase/                  → interfaces remotas e inter-módulo (próximas iteraciones)
 └── infraestructura/
     └── persistencia/
-        └── XxxRepositorioImpl.java  → implementación JPA
+        └── XxxRepositorioImpl.java → implementación JPA con EntityManager
 ```
 
-### Diagrama de paquetes
+### Diagrama de paquetes completo
 
 ```
 org.tallerJava
+│
 ├── moduloClientes
 │   ├── dominio
 │   │   ├── repositorio
@@ -132,64 +137,42 @@ org.tallerJava
 ## Modelo de dominio
 
 ```
-Cliente (abstract)
-├── cedula: String
-├── nombreCompleto: String
-├── telefono: String
-├── contrasena: String
-├── mediosPago: List<MedioPago>
-└── reclamos: List<Reclamo>
-    │
-    ├── ClienteComun
+Cliente (abstract)                          MedioPago (abstract)
+├── cedula: String                          ├── Tarjeta
+├── nombreCompleto: String                  │   ├── numero: String
+├── telefono: String                        │   ├── fechaVencimiento: LocalDate
+├── contrasena: String                      │   ├── digitoVerificacion: String
+├── mediosPago: List<MedioPago>             │   └── tipo: TipoTarjeta
+└── reclamos: List<Reclamo>                 └── CuentaUTE
+    ├── ClienteComun                                └── numeroCuenta: String
     └── ClienteProfesional
         ├── tipo: TipoProfesional
         └── porcentajeDescuento: float
 
-MedioPago (abstract)
-    ├── Tarjeta
-    │   ├── numero: String
-    │   ├── fechaVencimiento: LocalDate
-    │   ├── digitoVerificacion: String
-    │   └── tipo: TipoTarjeta
-    └── CuentaUTE
-        └── numeroCuenta: String
+EstacionCarga                               Cargador
+├── descripcion: String                     ├── tipo: TipoCargador
+├── calle: String                           ├── tieneCable: boolean
+├── departamento: String                    ├── tipoConector: TipoConector
+├── longitud: int                           ├── estado: EstadoCargador
+├── latitud: int                            ├── tiempoEstimadoFinalizacion: LocalDateTime *
+└── cargadores: List<Cargador>              ├── fechaEstimadaReparacion: LocalDate **
+                                            └── potenciaMinima: int ***
 
-EstacionCarga
-├── descripcion: String
-├── calle: String
-├── departamento: String
-├── longitud: int
-├── latitud: int
-└── cargadores: List<Cargador>
-
-Cargador
-├── tipo: TipoCargador
-├── tieneCable: boolean
-├── tipoConector: TipoConector
-├── estado: EstadoCargador
-├── tiempoEstimadoFinalizacion: LocalDateTime  (solo si OCUPADO)
-├── fechaEstimadaReparacion: LocalDate         (solo si FUERA_SERVICIO)
-└── potenciaMinima: int                        (solo si RAPIDO)
-
-Carga
-├── clienteId: Long
-├── cargador: Cargador
-├── fecha: LocalDate
-├── horaInicio: LocalDateTime
-├── horaFin: LocalDateTime
-├── importeTotal: float
+Carga                                       Pago
+├── clienteId: Long                         ├── clienteId: Long
+├── cargador: Cargador                      ├── cargaId: Long
+├── fecha: LocalDate                        ├── medioPagoId: Long
+├── horaInicio: LocalDateTime               ├── importe: Double
+├── horaFin: LocalDateTime                  ├── fecha: LocalDateTime
+├── importeTotal: float                     └── estado: String
 ├── recargoPorDemora: float
-├── porcentajeAvance: int   (0..100, solo si ACTIVA)
-├── horaEstimadaFin: LocalDateTime (solo si ACTIVA)
+├── porcentajeAvance: int  (0..100) *
+├── horaEstimadaFin: LocalDateTime *
 └── estado: EstadoCarga
 
-Pago
-├── clienteId: Long
-├── cargaId: Long
-├── medioPagoId: Long
-├── importe: Double
-├── fecha: LocalDateTime
-└── estado: String
+* solo si estado = ACTIVA
+** solo si estado = FUERA_SERVICIO
+*** solo si tipo = RAPIDO
 ```
 
 ---
@@ -197,70 +180,84 @@ Pago
 ## Módulos y casos de uso
 
 ### Módulo Clientes
+
 | Operación | Descripción | Consumidor |
 |---|---|---|
-| `registrarCliente(cliente)` | Registra un nuevo cliente | App móvil |
+| `registrarCliente(cliente)` | Registra un nuevo cliente (valida cédula única) | App móvil |
 | `altaMedioPago(clienteId, medioPago)` | Agrega un medio de pago al cliente | App móvil |
-| `obtenerClientes()` | Devuelve todos los clientes | Gestor web |
+| `obtenerClientes()` | Devuelve todos los clientes registrados | Gestor web |
 | `realizarReclamo(clienteId, comentario)` | Registra un reclamo del cliente | App móvil |
 
 ### Módulo Cargas
+
 | Operación | Descripción | Consumidor |
 |---|---|---|
-| `iniciarCarga(clienteId, cargadorId, medioPagoId)` | Inicia una carga | App móvil |
-| `verCargaActual(clienteId)` | Devuelve la carga activa | App móvil |
+| `iniciarCarga(clienteId, cargadorId, medioPagoId)` | Inicia una carga, ocupa el cargador | App móvil |
+| `verCargaActual(clienteId)` | Devuelve la carga activa del cliente | App móvil |
 | `verHistorico(clienteId, desde, hasta)` | Histórico de cargas por rango de fechas | App móvil |
-| `finalizarCarga(cargadorId, cargaId, consumo, recargo)` | Finaliza la carga y dispara el pago | Cargador |
-| `altaEstacion(estacion)` | Da de alta una estación | Gestor web |
-| `altaCargador(estacionId, cargadorId)` | Asocia un cargador a una estación | Gestor web |
-| `obtenerEstaciones()` | Lista estaciones y cargadores disponibles | App móvil |
+| `finalizarCarga(cargadorId, cargaId, consumo, recargo)` | Finaliza la carga, libera el cargador y dispara el pago | Cargador |
+| `altaEstacion(estacion)` | Da de alta una nueva estación de carga | Gestor web |
+| `altaCargador(estacionId, cargadorId)` | Asocia un cargador existente a una estación | Gestor web |
+| `obtenerEstaciones()` | Lista todas las estaciones con sus cargadores y estados | App móvil |
 
 ### Módulo Pagos
+
 | Operación | Descripción | Consumidor |
 |---|---|---|
-| `pagarCarga(clienteId, cargaId, importe, medioPagoId)` | Cobra la carga al cliente | Módulo Cargas |
-| `consultarPagos(clienteId, desde, hasta)` | Lista pagos del cliente | Gestor web |
+| `pagarCarga(clienteId, cargaId, importe, medioPagoId)` | Cobra la carga usando el medio de pago del cliente | Módulo Cargas |
+| `consultarPagos(clienteId, desde, hasta)` | Lista los pagos del cliente en el rango de fechas | Gestor web |
 
 ---
 
 ## Configuración del entorno
 
 ### Requisitos
-- Java 21
-- Maven 3.x
-- WildFly 27.0.1 (se descarga automáticamente con Maven)
-- MariaDB 12.2 — puerto **3307**, usuario **root**, contraseña **root**
 
-### Instalar MariaDB
-1. Descargar desde [https://mariadb.org/download/](https://mariadb.org/download/) — **Windows MSI Package**
-2. Durante la instalación:
+| Herramienta | Versión | Notas |
+|---|---|---|
+| Java | **17** (Temurin/OpenJDK) | No usar Java 21 |
+| Maven | 3.x | |
+| WildFly | 27.0.1 | Se descarga automáticamente |
+| MariaDB | 12.2 | Puerto 3307, usuario root, contraseña root |
+
+### 1. Instalar MariaDB
+
+1. Descargar desde [https://mariadb.org/download/](https://mariadb.org/download/) — **Windows x86_64 MSI Package**
+2. Durante la instalación configurar:
    - Contraseña de root: `root`
-   - Puerto: `3307` (para no chocar con MySQL si lo tenés instalado)
+   - Puerto: `3307`
 
-### Crear la base de datos
-Una sola vez, ejecutar desde la terminal:
+> ⚠️ Se usa el puerto **3307** para no chocar con MySQL que usa el 3306 por defecto.
+
+### 2. Crear la base de datos
+
+Ejecutar **una sola vez** desde la terminal:
+
 ```bash
 "C:\Program Files\MariaDB 12.2\bin\mysql.exe" -u root -proot -P 3307 -e "CREATE DATABASE IF NOT EXISTS tallerJava CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
-### JAR del driver
-El archivo `mariadb-java-client-3.3.3.jar` debe estar en la **raíz del proyecto**. Ya está commiteado en el repositorio.
+### 3. Verificar el JAR del driver
+
+El archivo `mariadb-java-client-3.3.3.jar` debe estar en la **raíz del proyecto**. Ya está incluido en el repositorio.
 
 ---
 
 ## Cómo correr el proyecto
 
+Desde la raíz del proyecto ejecutar:
+
 ```bash
 mvn wildfly:run
 ```
 
-Esto:
-1. Descarga y levanta WildFly automáticamente
-2. Ejecuta el `config.cli` que registra el driver MariaDB y crea el datasource
-3. Deploya la aplicación
-4. Hibernate crea las tablas automáticamente en `tallerJava`
+Al correr este comando:
+1. Maven descarga y levanta WildFly automáticamente
+2. Se ejecuta `config.cli` que registra el driver MariaDB y crea el datasource `java:jboss/MariaDB`
+3. Se deploya la aplicación
+4. Hibernate genera automáticamente las tablas en la base `tallerJava`
 
-> La primera vez puede tardar varios minutos porque descarga WildFly.
+> La **primera vez** puede tardar varios minutos porque descarga WildFly (~200MB).
 
 Para detener el servidor: `Ctrl + C`
 
@@ -270,9 +267,26 @@ Para detener el servidor: `Ctrl + C`
 
 | Tecnología | Versión | Uso |
 |---|---|---|
+| Java | 17 (Temurin) | Lenguaje |
 | Jakarta EE | 10 | Framework principal |
 | WildFly | 27.0.1 | Servidor de aplicaciones |
-| Hibernate | (incluido en WildFly) | ORM / JPA |
+| Hibernate | incluido en WildFly | ORM / JPA |
 | MariaDB | 12.2 | Base de datos |
-| CDI | (Jakarta) | Inyección de dependencias |
-| Maven | 3.x | Build y gestión de dependencias |
+| CDI | Jakarta | Inyección de dependencias |
+| Maven | 3.x | Build y dependencias |
+
+---
+
+## Problemas frecuentes
+
+**`release version 21 not supported`**
+→ El JDK instalado es menor a 21. El proyecto está configurado para Java 17. Verificar con `java -version` que sea Java 17.
+
+**`PKIX path building failed`**
+→ Error de certificado SSL al descargar dependencias de Maven. Generalmente se resuelve conectándose a otra red o desactivando el proxy/antivirus.
+
+**Puerto 3306 en uso al instalar MariaDB**
+→ MySQL ya está usando ese puerto. Durante la instalación de MariaDB elegir el puerto `3307`.
+
+**`Access denied for user`**
+→ Las credenciales de MariaDB no coinciden. Verificar que el usuario sea `root` y la contraseña `root`, y que el puerto sea `3307`.

@@ -25,8 +25,8 @@ public class ServicioClienteImpl implements ServicioCliente {
 
     @Override
     public Cliente registrarCliente(Cliente cliente) {
-        clienteRepositorio.buscarPorEmail(cliente.getEmail()).ifPresent(c -> {
-            throw new IllegalArgumentException("Ya existe un cliente con el email: " + cliente.getEmail());
+        clienteRepositorio.buscarPorCedula(cliente.getCedula()).ifPresent(c -> {
+            throw new IllegalArgumentException("Ya existe un cliente con la cédula: " + cliente.getCedula());
         });
         return clienteRepositorio.guardar(cliente);
     }
