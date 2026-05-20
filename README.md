@@ -238,11 +238,10 @@ Pago
    - Puerto: `3307` (para no chocar con MySQL si lo tenés instalado)
 
 ### Crear la base de datos
-Una sola vez, ejecutar:
+Una sola vez, ejecutar desde la terminal:
 ```bash
-mysql -u root -proot -P 3307 -e "CREATE DATABASE IF NOT EXISTS tallerJava CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+"C:\Program Files\MariaDB 12.2\bin\mysql.exe" -u root -proot -P 3307 -e "CREATE DATABASE IF NOT EXISTS tallerJava CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
-> El cliente `mysql` está en `C:\Program Files\MariaDB 12.2\bin\`
 
 ### JAR del driver
 El archivo `mariadb-java-client-3.3.3.jar` debe estar en la **raíz del proyecto**. Ya está commiteado en el repositorio.
