@@ -1,4 +1,4 @@
-package org.tallerJava.moduloClientes.repositorio;
+package org.tallerJava.moduloClientes.dominio.repositorio;
 
 import org.tallerJava.moduloClientes.dominio.Cliente;
 

@@ -1,4 +1,4 @@
-package org.tallerJava.moduloCargas.repositorio;
+package org.tallerJava.moduloCargas.dominio.repositorio;
 
 import org.tallerJava.moduloCargas.dominio.Carga;
 

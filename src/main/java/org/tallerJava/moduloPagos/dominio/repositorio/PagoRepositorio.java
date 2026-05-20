@@ -1,4 +1,4 @@
-package org.tallerJava.moduloPagos.repositorio;
+package org.tallerJava.moduloPagos.dominio.repositorio;
 
 import org.tallerJava.moduloPagos.dominio.Pago;
 

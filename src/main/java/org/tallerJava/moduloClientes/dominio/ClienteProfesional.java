@@ -1,34 +1,35 @@
 package org.tallerJava.moduloClientes.dominio;
 
-import jakarta.persistence.Entity;
+import jakarta.persistence.*;
 
 @Entity
 public class ClienteProfesional extends Cliente {
 
-    private String empresa;
+    @Enumerated(EnumType.STRING)
+    private TipoProfesional tipo;
 
-    private String rut;
+    private Float porcentajeDescuento;
 
     public ClienteProfesional() {
         super();
     }
 
     public ClienteProfesional(Long id,
-                              String nombre,
-                              String apellido,
-                              String email,
+                              String cedula,
+                              String nombreCompleto,
                               String telefono,
-                              String empresa,
-                              String rut) {
+                              String contrasena,
+                              TipoProfesional tipo,
+                              Float porcentajeDescuento) {
 
-        super(id, nombre, apellido, email, telefono);
-        this.empresa = empresa;
-        this.rut = rut;
+        super(id, cedula, nombreCompleto, telefono, contrasena);
+        this.tipo = tipo;
+        this.porcentajeDescuento = porcentajeDescuento;
     }
 
-    public String getEmpresa() { return empresa; }
-    public void setEmpresa(String empresa) { this.empresa = empresa; }
+    public TipoProfesional getTipo() { return tipo; }
+    public void setTipo(TipoProfesional tipo) { this.tipo = tipo; }
 
-    public String getRut() { return rut; }
-    public void setRut(String rut) { this.rut = rut; }
+    public Float getPorcentajeDescuento() { return porcentajeDescuento; }
+    public void setPorcentajeDescuento(Float porcentajeDescuento) { this.porcentajeDescuento = porcentajeDescuento; }
 }

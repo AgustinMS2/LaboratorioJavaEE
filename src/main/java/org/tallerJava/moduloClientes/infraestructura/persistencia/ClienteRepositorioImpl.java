@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.tallerJava.moduloClientes.dominio.Cliente;
-import org.tallerJava.moduloClientes.repositorio.ClienteRepositorio;
+import org.tallerJava.moduloClientes.dominio.repositorio.ClienteRepositorio;
 
 import java.util.List;
 import java.util.Optional;

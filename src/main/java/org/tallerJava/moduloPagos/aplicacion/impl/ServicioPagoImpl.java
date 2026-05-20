@@ -5,7 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.tallerJava.moduloPagos.aplicacion.ServicioPago;
 import org.tallerJava.moduloPagos.dominio.Pago;
-import org.tallerJava.moduloPagos.repositorio.PagoRepositorio;
+import org.tallerJava.moduloPagos.dominio.repositorio.PagoRepositorio;
 
 import java.time.LocalDateTime;
 import java.util.List;

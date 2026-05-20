@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.tallerJava.moduloPagos.dominio.Pago;
-import org.tallerJava.moduloPagos.repositorio.PagoRepositorio;
+import org.tallerJava.moduloPagos.dominio.repositorio.PagoRepositorio;
 
 import java.time.LocalDateTime;
 import java.util.List;

@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.tallerJava.moduloCargas.dominio.Cargador;
-import org.tallerJava.moduloCargas.repositorio.CargadorRepositorio;
+import org.tallerJava.moduloCargas.dominio.repositorio.CargadorRepositorio;
 
 import java.util.Optional;
 

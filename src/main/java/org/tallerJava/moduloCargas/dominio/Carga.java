@@ -2,6 +2,7 @@ package org.tallerJava.moduloCargas.dominio;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,32 +18,44 @@ public class Carga {
     @ManyToOne
     private Cargador cargador;
 
-    private LocalDateTime fechaInicio;
+    private LocalDate fecha;
 
-    private LocalDateTime fechaFin;
+    private LocalDateTime horaInicio;
 
-    private Double consumoKwh;
+    private LocalDateTime horaFin;
 
-    private Double importe;
+    private Float importeTotal;
 
-    private Boolean finalizada;
+    private Float recargoPorDemora;
+
+    // 0..100, solo si estado = ACTIVA
+    private Integer porcentajeAvance;
+
+    // Solo si estado = ACTIVA
+    private LocalDateTime horaEstimadaFin;
+
+    @Enumerated(EnumType.STRING)
+    private EstadoCarga estado;
 
     public Carga() {
     }
 
-    public Carga(Long id, Long clienteId, Cargador cargador, LocalDateTime fechaInicio) {
-        this.id = id;
+    public Carga(Long clienteId, Cargador cargador) {
         this.clienteId = clienteId;
         this.cargador = cargador;
-        this.fechaInicio = fechaInicio;
-        this.finalizada = false;
+        this.fecha = LocalDate.now();
+        this.horaInicio = LocalDateTime.now();
+        this.estado = EstadoCarga.ACTIVA;
+        this.porcentajeAvance = 0;
     }
 
-    public void finalizar(Double consumoKwh, Double importe) {
-        this.consumoKwh = consumoKwh;
-        this.importe = importe;
-        this.fechaFin = LocalDateTime.now();
-        this.finalizada = true;
+    public void finalizar(Float importeTotal, Float recargoPorDemora) {
+        this.importeTotal = importeTotal;
+        this.recargoPorDemora = recargoPorDemora;
+        this.horaFin = LocalDateTime.now();
+        this.estado = EstadoCarga.FINALIZADA;
+        this.porcentajeAvance = 100;
+        this.horaEstimadaFin = null;
     }
 
     public Long getId() { return id; }
@@ -54,18 +67,27 @@ public class Carga {
     public Cargador getCargador() { return cargador; }
     public void setCargador(Cargador cargador) { this.cargador = cargador; }
 
-    public LocalDateTime getFechaInicio() { return fechaInicio; }
-    public void setFechaInicio(LocalDateTime fechaInicio) { this.fechaInicio = fechaInicio; }
+    public LocalDate getFecha() { return fecha; }
+    public void setFecha(LocalDate fecha) { this.fecha = fecha; }
 
-    public LocalDateTime getFechaFin() { return fechaFin; }
-    public void setFechaFin(LocalDateTime fechaFin) { this.fechaFin = fechaFin; }
+    public LocalDateTime getHoraInicio() { return horaInicio; }
+    public void setHoraInicio(LocalDateTime horaInicio) { this.horaInicio = horaInicio; }
 
-    public Double getConsumoKwh() { return consumoKwh; }
-    public void setConsumoKwh(Double consumoKwh) { this.consumoKwh = consumoKwh; }
+    public LocalDateTime getHoraFin() { return horaFin; }
+    public void setHoraFin(LocalDateTime horaFin) { this.horaFin = horaFin; }
 
-    public Double getImporte() { return importe; }
-    public void setImporte(Double importe) { this.importe = importe; }
+    public Float getImporteTotal() { return importeTotal; }
+    public void setImporteTotal(Float importeTotal) { this.importeTotal = importeTotal; }
 
-    public Boolean getFinalizada() { return finalizada; }
-    public void setFinalizada(Boolean finalizada) { this.finalizada = finalizada; }
+    public Float getRecargoPorDemora() { return recargoPorDemora; }
+    public void setRecargoPorDemora(Float recargoPorDemora) { this.recargoPorDemora = recargoPorDemora; }
+
+    public Integer getPorcentajeAvance() { return porcentajeAvance; }
+    public void setPorcentajeAvance(Integer porcentajeAvance) { this.porcentajeAvance = porcentajeAvance; }
+
+    public LocalDateTime getHoraEstimadaFin() { return horaEstimadaFin; }
+    public void setHoraEstimadaFin(LocalDateTime horaEstimadaFin) { this.horaEstimadaFin = horaEstimadaFin; }
+
+    public EstadoCarga getEstado() { return estado; }
+    public void setEstado(EstadoCarga estado) { this.estado = estado; }
 }

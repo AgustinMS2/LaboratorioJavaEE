@@ -13,13 +13,13 @@ public abstract class Cliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nombre;
+    private String cedula;
 
-    private String apellido;
-
-    private String email;
+    private String nombreCompleto;
 
     private String telefono;
+
+    private String contrasena;
 
     @OneToMany(cascade = CascadeType.ALL)
     private List<MedioPago> mediosPago;
@@ -33,17 +33,16 @@ public abstract class Cliente {
     }
 
     public Cliente(Long id,
-                   String nombre,
-                   String apellido,
-                   String email,
-                   String telefono) {
+                   String cedula,
+                   String nombreCompleto,
+                   String telefono,
+                   String contrasena) {
 
         this.id = id;
-        this.nombre = nombre;
-        this.apellido = apellido;
-        this.email = email;
+        this.cedula = cedula;
+        this.nombreCompleto = nombreCompleto;
         this.telefono = telefono;
-
+        this.contrasena = contrasena;
         this.mediosPago = new ArrayList<>();
         this.reclamos = new ArrayList<>();
     }
@@ -59,17 +58,17 @@ public abstract class Cliente {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getCedula() { return cedula; }
+    public void setCedula(String cedula) { this.cedula = cedula; }
 
-    public String getApellido() { return apellido; }
-    public void setApellido(String apellido) { this.apellido = apellido; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public String getNombreCompleto() { return nombreCompleto; }
+    public void setNombreCompleto(String nombreCompleto) { this.nombreCompleto = nombreCompleto; }
 
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
+
+    public String getContrasena() { return contrasena; }
+    public void setContrasena(String contrasena) { this.contrasena = contrasena; }
 
     public List<MedioPago> getMediosPago() { return mediosPago; }
     public void setMediosPago(List<MedioPago> mediosPago) { this.mediosPago = mediosPago; }

@@ -7,9 +7,9 @@ import org.tallerJava.moduloCargas.aplicacion.ServicioCarga;
 import org.tallerJava.moduloCargas.dominio.Carga;
 import org.tallerJava.moduloCargas.dominio.Cargador;
 import org.tallerJava.moduloCargas.dominio.EstacionCarga;
-import org.tallerJava.moduloCargas.repositorio.CargaRepositorio;
-import org.tallerJava.moduloCargas.repositorio.CargadorRepositorio;
-import org.tallerJava.moduloCargas.repositorio.EstacionCargaRepositorio;
+import org.tallerJava.moduloCargas.dominio.repositorio.CargaRepositorio;
+import org.tallerJava.moduloCargas.dominio.repositorio.CargadorRepositorio;
+import org.tallerJava.moduloCargas.dominio.repositorio.EstacionCargaRepositorio;
 import org.tallerJava.moduloPagos.aplicacion.ServicioPago;
 
 import java.time.LocalDateTime;
@@ -40,10 +40,10 @@ public class ServicioCargaImpl implements ServicioCarga {
         Cargador cargador = cargadorRepositorio.buscarPorId(cargadorId)
                 .orElseThrow(() -> new IllegalArgumentException("Cargador no encontrado: " + cargadorId));
 
-        cargador.ocupar();
+        cargador.ocupar(LocalDateTime.now().plusHours(1));
         cargadorRepositorio.guardar(cargador);
 
-        Carga carga = new Carga(null, clienteId, cargador, LocalDateTime.now());
+        Carga carga = new Carga(clienteId, cargador);
         return cargaRepositorio.guardar(carga);
     }
 
@@ -63,8 +63,8 @@ public class ServicioCargaImpl implements ServicioCarga {
         Carga carga = cargaRepositorio.buscarPorId(cargaId)
                 .orElseThrow(() -> new IllegalArgumentException("Carga no encontrada: " + cargaId));
 
-        Double importe = consumoKwh + recargo;
-        carga.finalizar(consumoKwh, importe);
+        Float importe = consumoKwh.floatValue();
+        carga.finalizar(importe, recargo.floatValue());
         cargaRepositorio.guardar(carga);
 
         Cargador cargador = cargadorRepositorio.buscarPorId(cargadorId)
@@ -73,7 +73,7 @@ public class ServicioCargaImpl implements ServicioCarga {
         cargadorRepositorio.guardar(cargador);
 
         // Delegar el cobro al módulo de pagos
-        servicioPago.pagarCarga(carga.getClienteId(), cargaId, importe, null);
+        servicioPago.pagarCarga(carga.getClienteId(), cargaId, (double) importe, null);
 
         return carga;
     }

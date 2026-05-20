@@ -4,7 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.tallerJava.moduloCargas.dominio.Carga;
-import org.tallerJava.moduloCargas.repositorio.CargaRepositorio;
+import org.tallerJava.moduloCargas.dominio.EstadoCarga;
+import org.tallerJava.moduloCargas.dominio.repositorio.CargaRepositorio;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,8 +34,9 @@ public class CargaRepositorioImpl implements CargaRepositorio {
     @Override
     public Optional<Carga> buscarCargaActivaPorCliente(Long clienteId) {
         return em.createQuery(
-                        "SELECT c FROM Carga c WHERE c.clienteId = :clienteId AND c.finalizada = false",
+                        "SELECT c FROM Carga c WHERE c.clienteId = :clienteId AND c.estado = :estado",
                         Carga.class)
+                .setParameter("estado", EstadoCarga.ACTIVA)
                 .setParameter("clienteId", clienteId)
                 .getResultStream()
                 .findFirst();

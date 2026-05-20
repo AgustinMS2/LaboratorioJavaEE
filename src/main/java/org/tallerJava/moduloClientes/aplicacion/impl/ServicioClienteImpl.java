@@ -7,8 +7,8 @@ import org.tallerJava.moduloClientes.aplicacion.ServicioCliente;
 import org.tallerJava.moduloClientes.dominio.Cliente;
 import org.tallerJava.moduloClientes.dominio.MedioPago;
 import org.tallerJava.moduloClientes.dominio.Reclamo;
-import org.tallerJava.moduloClientes.repositorio.ClienteRepositorio;
-import org.tallerJava.moduloClientes.repositorio.MedioPagoRepositorio;
+import org.tallerJava.moduloClientes.dominio.repositorio.ClienteRepositorio;
+import org.tallerJava.moduloClientes.dominio.repositorio.MedioPagoRepositorio;
 
 import java.time.LocalDateTime;
 import java.util.List;

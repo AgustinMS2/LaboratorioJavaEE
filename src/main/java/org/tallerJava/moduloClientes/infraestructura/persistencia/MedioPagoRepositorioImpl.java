@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.tallerJava.moduloClientes.dominio.MedioPago;
-import org.tallerJava.moduloClientes.repositorio.MedioPagoRepositorio;
+import org.tallerJava.moduloClientes.dominio.repositorio.MedioPagoRepositorio;
 
 import java.util.Optional;
 

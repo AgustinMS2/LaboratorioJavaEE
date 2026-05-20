@@ -12,11 +12,15 @@ public class EstacionCarga {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nombre;
+    private String descripcion;
 
-    private String direccion;
+    private String calle;
 
-    private String ciudad;
+    private String departamento;
+
+    private int longitud;
+
+    private int latitud;
 
     @OneToMany(cascade = CascadeType.ALL)
     private List<Cargador> cargadores;
@@ -26,14 +30,18 @@ public class EstacionCarga {
     }
 
     public EstacionCarga(Long id,
-                         String nombre,
-                         String direccion,
-                         String ciudad) {
+                         String descripcion,
+                         String calle,
+                         String departamento,
+                         int longitud,
+                         int latitud) {
 
         this.id = id;
-        this.nombre = nombre;
-        this.direccion = direccion;
-        this.ciudad = ciudad;
+        this.descripcion = descripcion;
+        this.calle = calle;
+        this.departamento = departamento;
+        this.longitud = longitud;
+        this.latitud = latitud;
         this.cargadores = new ArrayList<>();
     }
 
@@ -44,14 +52,20 @@ public class EstacionCarga {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    public String getNombre() { return nombre; }
-    public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 
-    public String getDireccion() { return direccion; }
-    public void setDireccion(String direccion) { this.direccion = direccion; }
+    public String getCalle() { return calle; }
+    public void setCalle(String calle) { this.calle = calle; }
 
-    public String getCiudad() { return ciudad; }
-    public void setCiudad(String ciudad) { this.ciudad = ciudad; }
+    public String getDepartamento() { return departamento; }
+    public void setDepartamento(String departamento) { this.departamento = departamento; }
+
+    public int getLongitud() { return longitud; }
+    public void setLongitud(int longitud) { this.longitud = longitud; }
+
+    public int getLatitud() { return latitud; }
+    public void setLatitud(int latitud) { this.latitud = latitud; }
 
     public List<Cargador> getCargadores() { return cargadores; }
     public void setCargadores(List<Cargador> cargadores) { this.cargadores = cargadores; }

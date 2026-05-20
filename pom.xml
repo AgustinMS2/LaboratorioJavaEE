@@ -143,11 +143,9 @@
                             </user>
                         </users>
                     </add-user>
-<!--
                     <scripts>
                         <script>config.cli</script>
                     </scripts>
--->
                 </configuration>
             </plugin>
         </plugins>
