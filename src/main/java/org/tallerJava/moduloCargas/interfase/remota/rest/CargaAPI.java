@@ -9,6 +9,7 @@ import org.tallerJava.moduloCargas.aplicacion.ServicioCarga;
 import org.tallerJava.moduloCargas.dominio.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
@@ -42,11 +43,10 @@ public class CargaAPI {
     public Response verHistorico(@PathParam("clienteId") Long clienteId,
                                  @QueryParam("desde") String desde,
                                  @QueryParam("hasta") String hasta) {
-        List<CargaDTO> resultado = servicioCarga
-                .verHistorico(clienteId, LocalDateTime.parse(desde), LocalDateTime.parse(hasta))
-                .stream()
-                .map(CargaDTO::from)
-                .toList();
+        List<CargaDTO> resultado = new ArrayList<>();
+        for (Carga carga : servicioCarga.verHistorico(clienteId, LocalDateTime.parse(desde), LocalDateTime.parse(hasta))) {
+            resultado.add(CargaDTO.from(carga));
+        }
         return Response.ok(resultado).build();
     }
 
@@ -66,37 +66,24 @@ public class CargaAPI {
         return Response.status(Response.Status.CREATED).entity(EstacionDTO.from(nueva)).build();
     }
 
-    // curl -X POST "http://localhost:8080/LaboratorioJavaEE/gestion/cargas/estaciones/1/cargadores/1"
+    // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/cargas/estaciones/1/cargadores -H "Content-Type: application/json" -d "{\"tipo\":\"LENTO\",\"tieneCable\":true,\"tipoConector\":\"TIPO2\"}"
     @POST
-    @Path("/estaciones/{estacionId}/cargadores/{cargadorId}")
-    public Response altaCargador(@PathParam("estacionId") Long estacionId,
-                                 @PathParam("cargadorId") Long cargadorId) {
-        servicioCarga.altaCargador(estacionId, cargadorId);
-        return Response.status(Response.Status.CREATED).build();
+    @Path("/estaciones/{estacionId}/cargadores")
+    public Response altaCargador(@PathParam("estacionId") Long estacionId, CargadorDTO dto) {
+        Cargador cargador = new Cargador(TipoCargador.valueOf(dto.tipo), dto.tieneCable, TipoConector.valueOf(dto.tipoConector), dto.potenciaMinima);
+        Cargador nuevo = servicioCarga.altaCargador(estacionId, cargador);
+        return Response.status(Response.Status.CREATED).entity(CargadorDTO.from(nuevo)).build();
     }
 
     // curl -X GET http://localhost:8080/LaboratorioJavaEE/gestion/cargas/estaciones
     @GET
     @Path("/estaciones")
     public Response obtenerEstaciones() {
-        List<EstacionDTO> resultado = servicioCarga.obtenerEstaciones()
-                .stream()
-                .map(EstacionDTO::from)
-                .toList();
+        List<EstacionDTO> resultado = new ArrayList<>();
+        for (EstacionCarga estacion : servicioCarga.obtenerEstaciones()) {
+            resultado.add(EstacionDTO.from(estacion));
+        }
         return Response.ok(resultado).build();
     }
 
-    // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/cargas/cargadores -H "Content-Type: application/json" -d "{\"tipo\":\"LENTO\",\"tieneCable\":true,\"tipoConector\":\"TIPO2\"}"
-    @POST
-    @Path("/cargadores")
-    public Response altaCargador(CargadorDTO dto) {
-        Cargador cargador = new Cargador(
-                TipoCargador.valueOf(dto.tipo),
-                dto.tieneCable,
-                TipoConector.valueOf(dto.tipoConector),
-                dto.potenciaMinima
-        );
-        Cargador nuevo = servicioCarga.altaCargador(cargador);
-        return Response.status(Response.Status.CREATED).entity(CargadorDTO.from(nuevo)).build();
-    }
 }

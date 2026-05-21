@@ -85,15 +85,14 @@ public class ServicioCargaImpl implements ServicioCarga {
     }
 
     @Override
-    public void altaCargador(Long estacionId, Long cargadorId) {
+    public Cargador altaCargador(Long estacionId, Cargador cargador) {
         EstacionCarga estacion = estacionCargaRepositorio.buscarPorId(estacionId)
                 .orElseThrow(() -> new IllegalArgumentException("Estación no encontrada: " + estacionId));
 
-        Cargador cargador = cargadorRepositorio.buscarPorId(cargadorId)
-                .orElseThrow(() -> new IllegalArgumentException("Cargador no encontrado: " + cargadorId));
-
-        estacion.agregarCargador(cargador);
+        Cargador nuevo = cargadorRepositorio.guardar(cargador);
+        estacion.agregarCargador(nuevo);
         estacionCargaRepositorio.guardar(estacion);
+        return nuevo;
     }
 
     @Override
@@ -101,8 +100,4 @@ public class ServicioCargaImpl implements ServicioCarga {
         return estacionCargaRepositorio.obtenerTodas();
     }
 
-    @Override
-    public Cargador altaCargador(Cargador cargador) {
-        return cargadorRepositorio.guardar(cargador);
-    }
 }

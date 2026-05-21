@@ -9,6 +9,7 @@ import org.tallerJava.moduloClientes.aplicacion.ServicioCliente;
 import org.tallerJava.moduloClientes.dominio.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @ApplicationScoped
@@ -37,10 +38,10 @@ public class ClienteAPI {
     // curl -X GET http://localhost:8080/LaboratorioJavaEE/gestion/clientes
     @GET
     public Response obtenerClientes() {
-        List<ClienteDTO> resultado = servicioCliente.obtenerClientes()
-                .stream()
-                .map(ClienteDTO::from)
-                .toList();
+        List<ClienteDTO> resultado = new ArrayList<>();
+        for (Cliente cliente : servicioCliente.obtenerClientes()) {
+            resultado.add(ClienteDTO.from(cliente));
+        }
         return Response.ok(resultado).build();
     }
 

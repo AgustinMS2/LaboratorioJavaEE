@@ -25,10 +25,9 @@ public interface ServicioCarga {
     EstacionCarga altaEstacion(EstacionCarga estacion);
 
     // Da de alta un cargador asociado a una estación (gestor web)
-    void altaCargador(Long estacionId, Long cargadorId);
+    Cargador altaCargador(Long estacionId, Cargador cargador);
 
     // Retorna las estaciones disponibles con sus cargadores (app móvil)
     List<EstacionCarga> obtenerEstaciones();
 
-    Cargador altaCargador(Cargador cargador);
 }
