@@ -12,7 +12,6 @@ import org.tallerJava.moduloCargas.dominio.repositorio.CargaRepositorio;
 import org.tallerJava.moduloCargas.dominio.repositorio.CargadorRepositorio;
 import org.tallerJava.moduloCargas.dominio.repositorio.EstacionCargaRepositorio;
 import org.tallerJava.moduloCargas.interfase.evento.CargaFinalizadaEvento;
-import org.tallerJava.moduloPagos.aplicacion.ServicioPago;
 
 import java.time.LocalDateTime;
 import java.util.List;

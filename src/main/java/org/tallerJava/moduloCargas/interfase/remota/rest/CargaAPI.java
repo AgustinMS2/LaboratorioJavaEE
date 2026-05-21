@@ -61,8 +61,8 @@ public class CargaAPI {
     // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/cargas/estaciones -H "Content-Type: application/json" -d "{\"descripcion\":\"Estacion Centro\",\"calle\":\"Rivera 100\",\"departamento\":\"Maldonado\",\"longitud\":-34,\"latitud\":-54}"
     @POST
     @Path("/estaciones")
-    public Response altaEstacion(EstacionCarga estacion) {
-        EstacionCarga nueva = servicioCarga.altaEstacion(estacion);
+    public Response altaEstacion(EstacionDTO dto) {
+        EstacionCarga nueva = servicioCarga.altaEstacion(new EstacionCarga(null, dto.descripcion, dto.calle, dto.departamento, dto.longitud, dto.latitud));
         return Response.status(Response.Status.CREATED).entity(EstacionDTO.from(nueva)).build();
     }
 
