@@ -46,7 +46,7 @@ public class CargaRepositorioImpl implements CargaRepositorio {
     public List<Carga> buscarPorClienteYFecha(Long clienteId, LocalDateTime desde, LocalDateTime hasta) {
         return em.createQuery(
                         "SELECT c FROM Carga c WHERE c.clienteId = :clienteId " +
-                        "AND c.fechaInicio >= :desde AND c.fechaInicio <= :hasta",
+                        "AND c.horaInicio >= :desde AND c.horaInicio <= :hasta",
                         Carga.class)
                 .setParameter("clienteId", clienteId)
                 .setParameter("desde", desde)

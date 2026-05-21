@@ -1,6 +1,7 @@
 package org.tallerJava.moduloCargas.aplicacion.impl;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.tallerJava.moduloCargas.aplicacion.ServicioCarga;
@@ -10,6 +11,7 @@ import org.tallerJava.moduloCargas.dominio.EstacionCarga;
 import org.tallerJava.moduloCargas.dominio.repositorio.CargaRepositorio;
 import org.tallerJava.moduloCargas.dominio.repositorio.CargadorRepositorio;
 import org.tallerJava.moduloCargas.dominio.repositorio.EstacionCargaRepositorio;
+import org.tallerJava.moduloCargas.interfase.evento.CargaFinalizadaEvento;
 import org.tallerJava.moduloPagos.aplicacion.ServicioPago;
 
 import java.time.LocalDateTime;
@@ -29,7 +31,7 @@ public class ServicioCargaImpl implements ServicioCarga {
     private EstacionCargaRepositorio estacionCargaRepositorio;
 
     @Inject
-    private ServicioPago servicioPago;
+    private Event<CargaFinalizadaEvento> cargaFinalizadaEvent;
 
     @Override
     public Carga iniciarCarga(Long clienteId, Long cargadorId, Long medioPagoId) {
@@ -72,8 +74,7 @@ public class ServicioCargaImpl implements ServicioCarga {
         cargador.liberar();
         cargadorRepositorio.guardar(cargador);
 
-        // Delegar el cobro al módulo de pagos
-        servicioPago.pagarCarga(carga.getClienteId(), cargaId, (double) importe, null);
+        cargaFinalizadaEvent.fire(new CargaFinalizadaEvento(carga.getClienteId(), cargaId, (double) importe));
 
         return carga;
     }
