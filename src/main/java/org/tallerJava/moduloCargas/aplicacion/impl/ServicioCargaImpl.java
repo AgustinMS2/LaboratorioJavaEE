@@ -100,4 +100,9 @@ public class ServicioCargaImpl implements ServicioCarga {
     public List<EstacionCarga> obtenerEstaciones() {
         return estacionCargaRepositorio.obtenerTodas();
     }
+
+    @Override
+    public Cargador altaCargador(Cargador cargador) {
+        return cargadorRepositorio.guardar(cargador);
+    }
 }

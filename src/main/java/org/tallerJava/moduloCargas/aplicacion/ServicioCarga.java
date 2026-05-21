@@ -1,6 +1,7 @@
 package org.tallerJava.moduloCargas.aplicacion;
 
 import org.tallerJava.moduloCargas.dominio.Carga;
+import org.tallerJava.moduloCargas.dominio.Cargador;
 import org.tallerJava.moduloCargas.dominio.EstacionCarga;
 
 import java.time.LocalDateTime;
@@ -28,4 +29,6 @@ public interface ServicioCarga {
 
     // Retorna las estaciones disponibles con sus cargadores (app móvil)
     List<EstacionCarga> obtenerEstaciones();
+
+    Cargador altaCargador(Cargador cargador);
 }
