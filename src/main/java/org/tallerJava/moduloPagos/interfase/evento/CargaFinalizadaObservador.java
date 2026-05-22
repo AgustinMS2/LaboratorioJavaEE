@@ -17,7 +17,7 @@ public class CargaFinalizadaObservador {
                 evento.getClienteId(),
                 evento.getCargaId(),
                 evento.getImporte(),
-                null
+                evento.getMedioPagoId()
         );
     }
 }

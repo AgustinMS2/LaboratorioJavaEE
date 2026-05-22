@@ -44,7 +44,7 @@ public class ServicioCargaImpl implements ServicioCarga {
         cargador.ocupar(LocalDateTime.now().plusHours(1));
         cargadorRepositorio.guardar(cargador);
 
-        Carga carga = new Carga(clienteId, cargador);
+        Carga carga = new Carga(clienteId, cargador, medioPagoId);
         return cargaRepositorio.guardar(carga);
     }
 
@@ -73,7 +73,7 @@ public class ServicioCargaImpl implements ServicioCarga {
         cargador.liberar();
         cargadorRepositorio.guardar(cargador);
 
-        cargaFinalizadaEvent.fire(new CargaFinalizadaEvento(carga.getClienteId(), cargaId, (double) importe));
+        cargaFinalizadaEvent.fire(new CargaFinalizadaEvento(carga.getClienteId(), cargaId, (double) importe, carga.getMedioPagoId()));
 
         return carga;
     }

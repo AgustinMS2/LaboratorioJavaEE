@@ -15,6 +15,8 @@ public class Carga {
     // Referencia al cliente por ID para mantener desacoplamiento entre módulos
     private Long clienteId;
 
+    private Long medioPagoId;
+
     @ManyToOne
     private Cargador cargador;
 
@@ -40,9 +42,10 @@ public class Carga {
     public Carga() {
     }
 
-    public Carga(Long clienteId, Cargador cargador) {
+    public Carga(Long clienteId, Cargador cargador, Long medioPagoId) {
         this.clienteId = clienteId;
         this.cargador = cargador;
+        this.medioPagoId = medioPagoId;
         this.fecha = LocalDate.now();
         this.horaInicio = LocalDateTime.now();
         this.estado = EstadoCarga.ACTIVA;
@@ -90,4 +93,7 @@ public class Carga {
 
     public EstadoCarga getEstado() { return estado; }
     public void setEstado(EstadoCarga estado) { this.estado = estado; }
+
+    public Long getMedioPagoId() { return medioPagoId; }
+    public void setMedioPagoId(Long medioPagoId) { this.medioPagoId = medioPagoId; }
 }
