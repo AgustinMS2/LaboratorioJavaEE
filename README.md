@@ -12,6 +12,8 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
 4. [Modelo de dominio](#modelo-de-dominio)
 5. [Módulos y casos de uso](#módulos-y-casos-de-uso)
 6. [Configuración del entorno](#configuración-del-entorno)
+   - [Linux](#linux)
+   - [Windows](#windows)
 7. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
 8. [Tecnologías](#tecnologías)
 9. [Problemas frecuentes](#problemas-frecuentes)
@@ -218,18 +220,117 @@ Carga                                       Pago
 | Java | **17** (Temurin/OpenJDK) | No usar Java 21 |
 | Maven | 3.x | |
 | WildFly | 27.0.1 | Se descarga automáticamente |
-| MariaDB | 12.2 | Puerto 3307, usuario root, contraseña root |
+| MariaDB | 10.x o superior | Puerto **3307**, usuario `root`, contraseña `root` |
 
-### 1. Instalar MariaDB
+> ⚠️ Se usa el puerto **3307** para no chocar con MySQL/MariaDB que usan el 3306 por defecto.
+
+El archivo `mariadb-java-client-3.3.3.jar` debe estar en la **raíz del proyecto**. Ya está incluido en el repositorio.
+
+---
+
+### Linux
+
+Instrucciones probadas en distribuciones basadas en **Debian/Ubuntu**. En otras distros, usar el gestor de paquetes equivalente.
+
+#### 1. Instalar dependencias
+
+```bash
+sudo apt update
+sudo apt install -y openjdk-17-jdk maven mariadb-server
+```
+
+Comprobar versiones:
+
+```bash
+java -version    # debe mostrar 17.x
+mvn -version
+```
+
+Si `java -version` muestra Java 21 u otra versión, fijar Java 17 antes de compilar o ejecutar:
+
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH="$JAVA_HOME/bin:$PATH"
+java -version
+```
+
+Para dejarlo permanente, agregar esas dos líneas `export` al final de `~/.bashrc` (o `~/.profile`).
+
+#### 2. Configurar MariaDB (puerto 3307 y contraseña)
+
+Editar el archivo de configuración del servidor (ruta habitual en Ubuntu/Debian):
+
+```bash
+sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
+```
+
+Buscar la línea `#port = 3306`, descomentarla y cambiarla a:
+
+```ini
+port = 3307
+```
+
+Reiniciar el servicio:
+
+```bash
+sudo systemctl restart mariadb
+sudo systemctl enable mariadb
+```
+
+Definir la contraseña del usuario `root` (en instalaciones nuevas suele bastar con acceso por socket):
+
+```bash
+sudo mariadb -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'root'; FLUSH PRIVILEGES;"
+```
+
+Verificar que escucha en el puerto correcto:
+
+```bash
+sudo ss -tlnp | grep 3307
+```
+
+#### 3. Crear la base de datos
+
+Ejecutar **una sola vez** desde la raíz del proyecto (o cualquier directorio):
+
+```bash
+mysql -u root -proot -P 3307 -h 127.0.0.1 -e "CREATE DATABASE IF NOT EXISTS tallerJava CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+#### 4. Ejecutar el proyecto
+
+Clonar o abrir el repositorio y, desde su raíz:
+
+```bash
+cd /ruta/al/LaboratorioJavaEE
+mvn wildfly:run
+```
+
+Al correr este comando:
+
+1. Maven descarga y levanta WildFly automáticamente
+2. Se ejecuta `config.cli`, que registra el driver MariaDB y crea el datasource `java:jboss/MariaDB`
+3. Se despliega la aplicación
+4. Hibernate genera las tablas en la base `tallerJava`
+
+La **primera ejecución** puede tardar varios minutos (descarga de WildFly, ~200 MB).
+
+Para detener el servidor: `Ctrl + C`
+
+La consola de administración de WildFly queda disponible en [http://localhost:9990](http://localhost:9990) (usuario `root` / contraseña `rootpass1234`, según `pom.xml`).
+
+---
+
+### Windows
+
+#### 1. Instalar MariaDB
 
 1. Descargar desde [https://mariadb.org/download/](https://mariadb.org/download/) — **Windows x86_64 MSI Package**
 2. Durante la instalación configurar:
    - Contraseña de root: `root`
    - Puerto: `3307`
 
-> ⚠️ Se usa el puerto **3307** para no chocar con MySQL que usa el 3306 por defecto.
-
-### 2. Crear la base de datos
+#### 2. Crear la base de datos
 
 Ejecutar **una sola vez** desde la terminal:
 
@@ -237,29 +338,27 @@ Ejecutar **una sola vez** desde la terminal:
 "C:\Program Files\MariaDB 12.2\bin\mysql.exe" -u root -proot -P 3307 -e "CREATE DATABASE IF NOT EXISTS tallerJava CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
-### 3. Verificar el JAR del driver
+#### 3. Ejecutar el proyecto
 
-El archivo `mariadb-java-client-3.3.3.jar` debe estar en la **raíz del proyecto**. Ya está incluido en el repositorio.
-
----
-
-## Cómo correr el proyecto
-
-Desde la raíz del proyecto ejecutar:
+Desde la raíz del proyecto:
 
 ```bash
 mvn wildfly:run
 ```
 
-Al correr este comando:
-1. Maven descarga y levanta WildFly automáticamente
-2. Se ejecuta `config.cli` que registra el driver MariaDB y crea el datasource `java:jboss/MariaDB`
-3. Se deploya la aplicación
-4. Hibernate genera automáticamente las tablas en la base `tallerJava`
+Mismo comportamiento que en Linux (WildFly, `config.cli`, despliegue y tablas). Detener con `Ctrl + C`.
 
-> La **primera vez** puede tardar varios minutos porque descarga WildFly (~200MB).
+---
 
-Para detener el servidor: `Ctrl + C`
+## Cómo correr el proyecto
+
+En **Linux** y **Windows**, desde la raíz del repositorio:
+
+```bash
+mvn wildfly:run
+```
+
+Los pasos previos (Java 17, MariaDB en el puerto 3307, base `tallerJava`) están detallados en [Configuración del entorno](#configuración-del-entorno).
 
 ---
 
@@ -290,3 +389,9 @@ Para detener el servidor: `Ctrl + C`
 
 **`Access denied for user`**
 → Las credenciales de MariaDB no coinciden. Verificar que el usuario sea `root` y la contraseña `root`, y que el puerto sea `3307`.
+
+**MariaDB no arranca tras cambiar el puerto (Linux)**
+→ Revisar que no haya otro proceso en el 3307: `sudo ss -tlnp | grep 3307`. Ver logs: `sudo journalctl -u mariadb -n 50`.
+
+**`mvn wildfly:run` usa Java incorrecta (Linux)**
+→ Exportar `JAVA_HOME` apuntando a OpenJDK 17 (ver sección [Linux](#linux)).
