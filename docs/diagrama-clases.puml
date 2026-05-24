@@ -1,0 +1,333 @@
+' Diagramas de clases - Gestion de Movilidad Electrica
+' Varias imagenes en un archivo: elegir el nombre en el plugin PlantUML
+' o abrir los archivos sueltos en docs/ (recomendado si falla el preview)
+
+@startuml dominio_clientes
+title Modulo Clientes - Dominio
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+abstract class Cliente {
+  - id: Long
+  - cedula: String
+  - nombreCompleto: String
+  - telefono: String
+  - contrasena: String
+  + agregarMedioPago()
+  + agregarReclamo()
+}
+
+class ClienteComun
+class ClienteProfesional {
+  - tipo: TipoProfesional
+  - porcentajeDescuento: Float
+}
+
+abstract class MedioPago {
+  - id: Long
+}
+
+class Tarjeta {
+  - numero: String
+  - fechaVencimiento: LocalDate
+  - digitoVerificacion: String
+  - tipo: TipoTarjeta
+}
+
+class CuentaUTE {
+  - numeroCuenta: String
+  - titular: String
+  - direccionServicio: String
+}
+
+class Reclamo {
+  - id: Long
+  - comentario: String
+  - fecha: LocalDateTime
+}
+
+enum TipoProfesional {
+  TAXI
+  UBER
+  CABIFY
+}
+
+enum TipoTarjeta {
+  CREDITO
+  DEBITO
+}
+
+Cliente <|-- ClienteComun
+Cliente <|-- ClienteProfesional
+Cliente "1" *-- "0..*" MedioPago
+Cliente "1" *-- "0..*" Reclamo
+MedioPago <|-- Tarjeta
+MedioPago <|-- CuentaUTE
+ClienteProfesional --> TipoProfesional
+Tarjeta --> TipoTarjeta
+
+@enduml
+
+
+@startuml dominio_cargas
+title Modulo Cargas - Dominio
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+class EstacionCarga {
+  - id: Long
+  - descripcion: String
+  - calle: String
+  - departamento: String
+  - longitud: int
+  - latitud: int
+  + agregarCargador()
+}
+
+class Cargador {
+  - id: Long
+  - tipo: TipoCargador
+  - tieneCable: Boolean
+  - tipoConector: TipoConector
+  - estado: EstadoCargador
+  + ocupar()
+  + liberar()
+  + fueraDeServicio()
+}
+
+class Carga {
+  - id: Long
+  - clienteId: Long
+  - importeTotal: Float
+  - recargoPorDemora: Float
+  - estado: EstadoCarga
+  + finalizar()
+}
+
+enum TipoCargador {
+  LENTO
+  RAPIDO
+}
+
+enum TipoConector {
+  TIPO1
+  TIPO2
+  CCS
+  CHADEMO
+}
+
+enum EstadoCargador {
+  DISPONIBLE
+  OCUPADO
+  FUERA_SERVICIO
+}
+
+enum EstadoCarga {
+  ACTIVA
+  FINALIZADA
+  CANCELADA
+}
+
+EstacionCarga "1" *-- "0..*" Cargador : cargadores
+Carga "*" --> "1" Cargador
+Carga --> EstadoCarga
+Cargador --> TipoCargador
+Cargador --> TipoConector
+Cargador --> EstadoCargador
+
+note bottom of Carga
+  clienteId referencia al modulo Clientes
+  (sin relacion JPA directa)
+end note
+
+@enduml
+
+
+@startuml dominio_pagos
+title Modulo Pagos - Dominio
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+class Pago {
+  - id: Long
+  - clienteId: Long
+  - cargaId: Long
+  - medioPagoId: Long
+  - importe: Double
+  - fecha: LocalDateTime
+  - estado: String
+}
+
+class ClienteRef <<external>> {
+  modulo Clientes
+}
+
+class CargaRef <<external>> {
+  modulo Cargas
+}
+
+class MedioPagoRef <<external>> {
+  modulo Clientes
+}
+
+Pago ..> ClienteRef : clienteId
+Pago ..> CargaRef : cargaId
+Pago ..> MedioPagoRef : medioPagoId
+
+@enduml
+
+
+@startuml dominio_enlaces
+title Enlaces entre modulos
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+together {
+  class Cliente
+  class MedioPago
+}
+
+together {
+  class EstacionCarga
+  class Cargador
+  class Carga
+}
+
+together {
+  class Pago
+}
+
+EstacionCarga *-- Cargador
+Carga --> Cargador
+Cliente *-- MedioPago
+
+Carga ..> Cliente : clienteId
+Pago ..> Cliente : clienteId
+Pago ..> Carga : cargaId
+Pago ..> MedioPago : medioPagoId
+
+@enduml
+
+
+@startuml aplicacion_clientes
+title Modulo Clientes - Aplicacion y REST
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+interface ServicioCliente {
+  + registrarCliente()
+  + altaMedioPago()
+  + obtenerClientes()
+  + realizarReclamo()
+}
+
+class ServicioClienteImpl
+interface ClienteRepositorio
+interface MedioPagoRepositorio
+class ClienteRepositorioImpl
+class MedioPagoRepositorioImpl
+class ClienteAPI <<REST>>
+
+ServicioCliente <|.. ServicioClienteImpl
+ClienteRepositorio <|.. ClienteRepositorioImpl
+MedioPagoRepositorio <|.. MedioPagoRepositorioImpl
+ServicioClienteImpl --> ClienteRepositorio
+ServicioClienteImpl --> MedioPagoRepositorio
+ClienteAPI --> ServicioCliente
+
+@enduml
+
+
+@startuml aplicacion_cargas
+title Modulo Cargas - Aplicacion y REST
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+interface ServicioCarga {
+  + iniciarCarga()
+  + verCargaActual()
+  + verHistorico()
+  + finalizarCarga()
+  + altaEstacion()
+  + altaCargador()
+  + obtenerEstaciones()
+}
+
+class ServicioCargaImpl
+interface CargaRepositorio
+interface CargadorRepositorio
+interface EstacionCargaRepositorio
+class CargaRepositorioImpl
+class CargadorRepositorioImpl
+class EstacionCargaRepositorioImpl
+class CargaAPI <<REST>>
+class CargaFinalizadaEvento
+
+ServicioCarga <|.. ServicioCargaImpl
+CargaRepositorio <|.. CargaRepositorioImpl
+CargadorRepositorio <|.. CargadorRepositorioImpl
+EstacionCargaRepositorio <|.. EstacionCargaRepositorioImpl
+ServicioCargaImpl --> CargaRepositorio
+ServicioCargaImpl --> CargadorRepositorio
+ServicioCargaImpl --> EstacionCargaRepositorio
+CargaAPI --> ServicioCarga
+ServicioCargaImpl ..> CargaFinalizadaEvento : fire
+
+@enduml
+
+
+@startuml aplicacion_pagos
+title Modulo Pagos - Aplicacion y REST
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+interface ServicioPago {
+  + pagarCarga()
+  + consultarPagos()
+}
+
+class ServicioPagoImpl
+interface PagoRepositorio
+class PagoRepositorioImpl
+class PagoAPI <<REST>>
+class CargaFinalizadaObservador
+
+ServicioPago <|.. ServicioPagoImpl
+PagoRepositorio <|.. PagoRepositorioImpl
+ServicioPagoImpl --> PagoRepositorio
+PagoAPI --> ServicioPago
+CargaFinalizadaObservador --> ServicioPago : pagarCarga
+
+note right of ServicioPago
+  pagarCarga no tiene endpoint REST
+  lo invoca el observador CDI
+end note
+
+@enduml
+
+
+@startuml aplicacion_eventos
+title Evento Cargas a Pagos
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+class ServicioCargaImpl
+class CargaFinalizadaEvento
+class CargaFinalizadaObservador
+interface ServicioPago
+class ServicioPagoImpl
+
+ServicioCargaImpl --> CargaFinalizadaEvento : fire
+CargaFinalizadaObservador ..> CargaFinalizadaEvento : observes
+CargaFinalizadaObservador --> ServicioPago : pagarCarga
+ServicioPago <|.. ServicioPagoImpl
+
+@enduml
