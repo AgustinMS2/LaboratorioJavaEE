@@ -38,7 +38,7 @@ class CargadorTest {
     @Test
     void finalizarCarga_marcaComoFinalizada() {
         Cargador cargador = new Cargador(TipoCargador.LENTO, false, TipoConector.TIPO2, null);
-        Carga carga = new Carga(1L, cargador);
+        Carga carga = new Carga(1L, cargador, 1L);
 
         carga.finalizar(150.5f, 10f);
 
