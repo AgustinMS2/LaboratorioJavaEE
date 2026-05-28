@@ -16,7 +16,8 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
    - [Windows](#windows)
 7. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
 8. [Tecnologías](#tecnologías)
-9. [Problemas frecuentes](#problemas-frecuentes)
+9. [Mocks de sistemas externos](#mocks-de-sistemas-externos)
+10. [Problemas frecuentes](#problemas-frecuentes)
 
 ---
 
