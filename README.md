@@ -376,6 +376,20 @@ Los pasos previos (Java 17, MariaDB en el puerto 3307, base `tallerJava`) están
 
 ---
 
+## Mocks de sistemas externos
+
+El proyecto requiere los siguientes mocks para funcionar:
+
+### FacturaUTEMock
+1. Clonar el repositorio FacturaUTEMock
+2. Compilar con `mvn clean package`
+3. Copiar el WAR al WildFly del core:
+    - Linux: `cp target/FacturaUTEMock.war <ruta-core>/target/server/standalone/deployments/`
+    - Windows: `copy target\FacturaUTEMock.war <ruta-core>\target\server\standalone\deployments\`
+4. Levantar el core con `mvn wildfly:run`
+
+---
+
 ## Problemas frecuentes
 
 **`release version 21 not supported`**
