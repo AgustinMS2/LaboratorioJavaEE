@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
+@Table(name = "clientes_tarjeta")
 public class Tarjeta extends MedioPago {
 
     private String numero;

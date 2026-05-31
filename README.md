@@ -33,24 +33,11 @@ El proyecto sigue una **arquitectura monolítica modular**, donde cada módulo e
 
 Los módulos se comunican entre sí únicamente a través de las interfaces definidas en sus paquetes `aplicacion/`, respetando el principio de bajo acoplamiento. Cuando `moduloCargas` necesita cobrar un pago, invoca la interfaz `ServicioPago` del `moduloPagos` sin conocer su implementación interna.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                         WildFly 27                           │
-│                                                              │
-│  ┌───────────────┐   ┌───────────────┐   ┌───────────────┐  │
-│  │moduloClientes │   │ moduloCargas  │   │ moduloPagos   │  │
-│  │               │   │               │──▶│               │  │
-│  │  ServicioClien│   │  ServicioCarga│   │  ServicioPago │  │
-│  └───────────────┘   └───────────────┘   └───────────────┘  │
-│          │                   │                   │           │
-│          └───────────────────┴───────────────────┘           │
-│                              │                               │
-│                    ┌─────────▼────────┐                      │
-│                    │    MariaDB       │                      │
-│                    │   tallerJava     │                      │
-│                    └──────────────────┘                      │
-└──────────────────────────────────────────────────────────────┘
-```
+### Sistemas y subsistemas
+![Integración del sistema](docs/integracion-sistema.png)
+
+### Modulos
+![Arquitectura modular](docs/arquitectura-modulos.png)
 
 ---
 
@@ -139,44 +126,8 @@ org.tallerJava
 
 ## Modelo de dominio
 
-```
-Cliente (abstract)                          MedioPago (abstract)
-├── cedula: String                          ├── Tarjeta
-├── nombreCompleto: String                  │   ├── numero: String
-├── telefono: String                        │   ├── fechaVencimiento: LocalDate
-├── contrasena: String                      │   ├── digitoVerificacion: String
-├── mediosPago: List<MedioPago>             │   └── tipo: TipoTarjeta
-└── reclamos: List<Reclamo>                 └── CuentaUTE
-    ├── ClienteComun                                └── numeroCuenta: String
-    └── ClienteProfesional
-        ├── tipo: TipoProfesional
-        └── porcentajeDescuento: float
+![Arquitectura modular](docs/diagrama-dominio.png)
 
-EstacionCarga                               Cargador
-├── descripcion: String                     ├── tipo: TipoCargador
-├── calle: String                           ├── tieneCable: boolean
-├── departamento: String                    ├── tipoConector: TipoConector
-├── longitud: int                           ├── estado: EstadoCargador
-├── latitud: int                            ├── tiempoEstimadoFinalizacion: LocalDateTime *
-└── cargadores: List<Cargador>              ├── fechaEstimadaReparacion: LocalDate **
-                                            └── potenciaMinima: int ***
-
-Carga                                       Pago
-├── clienteId: Long                         ├── clienteId: Long
-├── cargador: Cargador                      ├── cargaId: Long
-├── fecha: LocalDate                        ├── medioPagoId: Long
-├── horaInicio: LocalDateTime               ├── importe: Double
-├── horaFin: LocalDateTime                  ├── fecha: LocalDateTime
-├── importeTotal: float                     └── estado: String
-├── recargoPorDemora: float
-├── porcentajeAvance: int  (0..100) *
-├── horaEstimadaFin: LocalDateTime *
-└── estado: EstadoCarga
-
-* solo si estado = ACTIVA
-** solo si estado = FUERA_SERVICIO
-*** solo si tipo = RAPIDO
-```
 
 ---
 
@@ -379,15 +330,23 @@ Los pasos previos (Java 17, MariaDB en el puerto 3307, base `tallerJava`) están
 
 ## Mocks de sistemas externos
 
-El proyecto requiere los siguientes mocks para funcionar:
+El proyecto requiere dos mocks para funcionar correctamente:
 
-### FacturaUTEMock
-1. Clonar el repositorio FacturaUTEMock
-2. Compilar con `mvn clean package`
-3. Copiar el WAR al WildFly del core:
-    - Linux: `cp target/FacturaUTEMock.war <ruta-core>/target/server/standalone/deployments/`
-    - Windows: `copy target\FacturaUTEMock.war <ruta-core>\target\server\standalone\deployments\`
-4. Levantar el core con `mvn wildfly:run`
+| Mock | Repositorio | WAR generado |
+|---|---|---|
+| FacturaUTEMock | FacturacionUTE | `FacturaUTEMock.war` |
+| ServicioMedioPagoMock | ServicioMedioPagoMock | `ServicioMedioPagoMock-1.0.0.war` |
+
+### Actualizar los mocks
+
+Si se modifica alguno de los mocks y se quiere actualizar el WAR en el repositorio, los tres proyectos deben estar en la misma carpeta padre:
+
+    proyectos/
+    ├── LaboratorioJavaEE/       ← core (este repositorio)
+    ├── FacturacionUTE/          ← mock UTE
+    └── ServicioMedioPagoMock/   ← mock medio de pago
+
+Luego correr el script (`run.bat` o `run.sh`), que recompila los mocks, actualiza `mocks/` y levanta el servidor.
 
 ---
 

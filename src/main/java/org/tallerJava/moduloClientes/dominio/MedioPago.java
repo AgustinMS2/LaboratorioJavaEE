@@ -3,6 +3,7 @@ package org.tallerJava.moduloClientes.dominio;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "clientes_medioPago")
 @Inheritance(strategy = InheritanceType.JOINED)
 public abstract class MedioPago {
 

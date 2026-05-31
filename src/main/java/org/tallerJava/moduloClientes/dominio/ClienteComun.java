@@ -1,8 +1,10 @@
 package org.tallerJava.moduloClientes.dominio;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "clientes_clienteComun")
 public class ClienteComun extends Cliente {
 
     public ClienteComun() {

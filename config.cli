@@ -24,3 +24,16 @@ connect
     catch
         echo "No se crea datasource, ya existe"
     end-try
+    #4to se despliegan los mocks
+    try
+        deploy ./mocks/FacturaUTEMock.war --force
+        echo "FacturaUTEMock desplegado"
+    catch
+        echo "FacturaUTEMock no encontrado"
+    end-try
+    try
+        deploy ./mocks/ServicioMedioPagoMock-1.0.0.war --force
+        echo "ServicioMedioPagoMock desplegado"
+    catch
+        echo "ServicioMedioPagoMock no encontrado"
+    end-try

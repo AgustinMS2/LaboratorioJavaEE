@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(name = "clientes_cliente")
 @Inheritance(strategy = InheritanceType.JOINED)
 public abstract class Cliente {
 

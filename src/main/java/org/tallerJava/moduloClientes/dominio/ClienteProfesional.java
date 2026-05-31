@@ -3,6 +3,7 @@ package org.tallerJava.moduloClientes.dominio;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "clientes_clienteProfesional")
 public class ClienteProfesional extends Cliente {
 
     @Enumerated(EnumType.STRING)
