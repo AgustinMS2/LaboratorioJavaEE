@@ -17,7 +17,8 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
 7. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
 8. [Tecnologías](#tecnologías)
 9. [Mocks de sistemas externos](#mocks-de-sistemas-externos)
-10. [Problemas frecuentes](#problemas-frecuentes)
+10. [Rate Limiter](#rate-limiter)
+11. [Problemas frecuentes](#problemas-frecuentes)
 
 ---
 
@@ -347,6 +348,26 @@ Si se modifica alguno de los mocks y se quiere actualizar el WAR en el repositor
     └── ServicioMedioPagoMock/   ← mock medio de pago
 
 Luego correr el script (`run.bat` o `run.sh`), que recompila los mocks, actualiza `mocks/` y levanta el servidor.
+
+---
+
+## Rate Limiter
+
+El endpoint `verHistorico` está protegido por un rate limiter del tipo Token Bucket, implementado con la librería Bucket4j.
+
+### Configuración
+
+| Parámetro | Valor |
+|---|---|
+| Capacidad inicial | 10 tokens |
+| Tasa de reposición | 5 tokens por segundo |
+| Endpoint protegido | `GET /cargas/historico/{clienteId}` |
+
+Cuando se supera el límite el servidor responde con HTTP `429 Too Many Requests`.
+
+### Pruebas de carga
+
+Se incluye el archivo `PlanPruebasRateLimiter.jmx` para probar el rate limiter con JMeter. Envía 15 requests por segundo durante 40 segundos, lo que permite observar claramente la transición de respuestas `200` a `429` en el gráfico *Response Codes per Second*.
 
 ---
 
