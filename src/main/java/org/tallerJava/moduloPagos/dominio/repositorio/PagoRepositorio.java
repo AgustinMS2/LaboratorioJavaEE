@@ -8,4 +8,5 @@ import java.util.List;
 public interface PagoRepositorio {
     Pago guardar(Pago pago);
     List<Pago> buscarPorClienteYFecha(Long clienteId, LocalDateTime desde, LocalDateTime hasta);
+    boolean tieneDeudaPendiente(Long clienteId);
 }

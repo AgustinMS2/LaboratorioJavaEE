@@ -7,6 +7,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.tallerJava.moduloCargas.aplicacion.impl.ServicioCargaImpl;
+import org.tallerJava.moduloCargas.aplicacion.puerto.ConsultaDeuda;
 import org.tallerJava.moduloCargas.dominio.Carga;
 import org.tallerJava.moduloCargas.dominio.repositorio.CargaRepositorio;
 import org.tallerJava.moduloCargas.dominio.repositorio.CargadorRepositorio;
@@ -36,11 +37,15 @@ class ServicioCargaImplTest {
     @Mock
     private Event<CargaFinalizadaEvento> cargaFinalizadaEvent;
 
+    @Mock
+    private ConsultaDeuda consultaDeuda;
+
     @InjectMocks
     private ServicioCargaImpl servicioCarga;
 
     @Test
     void iniciarCarga_clienteConCargaActiva_lanzaExcepcion() {
+        when(consultaDeuda.tieneDeudaPendiente(1L)).thenReturn(false);
         when(cargaRepositorio.buscarCargaActivaPorCliente(1L))
                 .thenReturn(Optional.of(new Carga()));
 

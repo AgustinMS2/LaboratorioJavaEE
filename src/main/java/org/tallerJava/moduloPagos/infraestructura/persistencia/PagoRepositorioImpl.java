@@ -35,4 +35,14 @@ public class PagoRepositorioImpl implements PagoRepositorio {
                 .setParameter("hasta", hasta)
                 .getResultList();
     }
+
+    @Override
+    public boolean tieneDeudaPendiente(Long clienteId) {
+        Long count = em.createQuery(
+                        "SELECT COUNT(p) FROM Pago p WHERE p.clienteId = :clienteId AND p.estado = 'RECHAZADO'",
+                        Long.class)
+                .setParameter("clienteId", clienteId)
+                .getSingleResult();
+        return count > 0;
+    }
 }

@@ -4,9 +4,13 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.tallerJava.moduloPagos.aplicacion.ServicioPago;
+import org.tallerJava.moduloPagos.aplicacion.puerto.ConsultaMedioPago;
 import org.tallerJava.moduloPagos.dominio.Pago;
 import org.tallerJava.moduloPagos.dominio.repositorio.PagoRepositorio;
+import org.tallerJava.moduloPagos.infraestructura.integracion.ClienteFacturaUTEHTTP;
+import org.tallerJava.moduloPagos.infraestructura.integracion.ClienteMedioPagoHTTP;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -17,9 +21,36 @@ public class ServicioPagoImpl implements ServicioPago {
     @Inject
     private PagoRepositorio pagoRepositorio;
 
+    @Inject
+    private ConsultaMedioPago consultaMedioPago;
+
+    @Inject
+    private ClienteMedioPagoHTTP clienteMedioPagoHTTP;
+
+    @Inject
+    private ClienteFacturaUTEHTTP clienteFacturaUTEHTTP;
+
     @Override
     public Pago pagarCarga(Long clienteId, Long cargaId, Double importe, Long medioPagoId) {
+        ConsultaMedioPago.DatosMedioPago datos = consultaMedioPago.obtener(medioPagoId);
+
+        String estado;
+        if ("TARJETA".equals(datos.tipo())) {
+            boolean aprobado = clienteMedioPagoHTTP.autorizar(
+                    clienteId.toString(),
+                    datos.numeroTarjeta(),
+                    BigDecimal.valueOf(importe)
+            );
+            estado = aprobado ? "APROBADO" : "RECHAZADO";
+        } else if ("CUENTA_UTE".equals(datos.tipo())) {
+            clienteFacturaUTEHTTP.notificarPago(clienteId, cargaId, datos.numeroCuenta(), importe);
+            estado = "PROCESADO";
+        } else {
+            estado = "PROCESADO";
+        }
+
         Pago pago = new Pago(clienteId, cargaId, medioPagoId, importe);
+        pago.setEstado(estado);
         return pagoRepositorio.guardar(pago);
     }
 

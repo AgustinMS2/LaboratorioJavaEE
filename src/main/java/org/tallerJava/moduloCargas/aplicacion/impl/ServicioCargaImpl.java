@@ -5,6 +5,7 @@ import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.tallerJava.moduloCargas.aplicacion.ServicioCarga;
+import org.tallerJava.moduloCargas.aplicacion.puerto.ConsultaDeuda;
 import org.tallerJava.moduloCargas.dominio.Carga;
 import org.tallerJava.moduloCargas.dominio.Cargador;
 import org.tallerJava.moduloCargas.dominio.EstacionCarga;
@@ -32,8 +33,15 @@ public class ServicioCargaImpl implements ServicioCarga {
     @Inject
     private Event<CargaFinalizadaEvento> cargaFinalizadaEvent;
 
+    @Inject
+    private ConsultaDeuda consultaDeuda;
+
     @Override
     public Carga iniciarCarga(Long clienteId, Long cargadorId, Long medioPagoId) {
+        if (consultaDeuda.tieneDeudaPendiente(clienteId)) {
+            throw new IllegalStateException("El cliente tiene un pago rechazado pendiente. Debe saldar la deuda antes de iniciar una nueva carga.");
+        }
+
         cargaRepositorio.buscarCargaActivaPorCliente(clienteId).ifPresent(c -> {
             throw new IllegalStateException("El cliente ya tiene una carga activa");
         });
