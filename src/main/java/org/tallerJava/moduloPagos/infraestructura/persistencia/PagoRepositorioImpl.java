@@ -8,6 +8,7 @@ import org.tallerJava.moduloPagos.dominio.repositorio.PagoRepositorio;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @ApplicationScoped
 public class PagoRepositorioImpl implements PagoRepositorio {
@@ -34,6 +35,17 @@ public class PagoRepositorioImpl implements PagoRepositorio {
                 .setParameter("desde", desde)
                 .setParameter("hasta", hasta)
                 .getResultList();
+    }
+
+    @Override
+    public Optional<Pago> buscarPagoRechazado(Long clienteId) {
+        return em.createQuery(
+                        "SELECT p FROM Pago p WHERE p.clienteId = :clienteId AND p.estado = 'RECHAZADO' ORDER BY p.fecha DESC",
+                        Pago.class)
+                .setParameter("clienteId", clienteId)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst();
     }
 
     @Override

@@ -12,4 +12,7 @@ public interface ServicioPago {
 
     // Retorna pagos del cliente en el rango de fechas (gestor web)
     List<Pago> consultarPagos(Long clienteId, LocalDateTime desde, LocalDateTime hasta);
+
+    // Salda la deuda pendiente del cliente invocando al sistema externo de medio de pago
+    void pagarDeuda(Long clienteId);
 }

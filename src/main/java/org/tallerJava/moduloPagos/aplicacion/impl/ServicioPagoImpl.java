@@ -58,4 +58,16 @@ public class ServicioPagoImpl implements ServicioPago {
     public List<Pago> consultarPagos(Long clienteId, LocalDateTime desde, LocalDateTime hasta) {
         return pagoRepositorio.buscarPorClienteYFecha(clienteId, desde, hasta);
     }
+
+    @Override
+    public void pagarDeuda(Long clienteId) {
+        Pago pago = pagoRepositorio.buscarPagoRechazado(clienteId)
+                .orElseThrow(() -> new IllegalStateException("El cliente no tiene deuda pendiente"));
+
+        ConsultaMedioPago.DatosMedioPago datos = consultaMedioPago.obtener(pago.getMedioPagoId());
+        clienteMedioPagoHTTP.pagarDeuda(datos.numeroTarjeta());
+
+        pago.setEstado("SALDADO");
+        pagoRepositorio.guardar(pago);
+    }
 }

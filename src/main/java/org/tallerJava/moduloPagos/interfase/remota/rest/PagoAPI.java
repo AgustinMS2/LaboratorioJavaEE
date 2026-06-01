@@ -34,4 +34,12 @@ public class PagoAPI {
         }
         return Response.ok(resultado).build();
     }
+
+    // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/pagos/1/pagar-deuda
+    @POST
+    @Path("/{clienteId}/pagar-deuda")
+    public Response pagarDeuda(@PathParam("clienteId") Long clienteId) {
+        servicioPago.pagarDeuda(clienteId);
+        return Response.ok().build();
+    }
 }
