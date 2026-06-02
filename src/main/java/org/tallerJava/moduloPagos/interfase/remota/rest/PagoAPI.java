@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.tallerJava.moduloClientes.infraestructura.seguridad.AppMovil;
 import org.tallerJava.moduloPagos.aplicacion.ServicioPago;
 import org.tallerJava.moduloPagos.dominio.Pago;
 
@@ -35,7 +36,8 @@ public class PagoAPI {
         return Response.ok(resultado).build();
     }
 
-    // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/pagos/1/pagar-deuda
+    // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/pagos/1/pagar-deuda -H "Authorization: Basic <base64(cedula:contrasena)>"
+    @AppMovil
     @POST
     @Path("/{clienteId}/pagar-deuda")
     public Response pagarDeuda(@PathParam("clienteId") Long clienteId) {

@@ -7,6 +7,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tallerJava.moduloCargas.aplicacion.ServicioCarga;
 import org.tallerJava.moduloCargas.dominio.*;
+import org.tallerJava.moduloClientes.infraestructura.seguridad.AppMovil;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,6 +23,7 @@ public class CargaAPI {
     private ServicioCarga servicioCarga;
 
     // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/cargas/iniciar -H "Content-Type: application/json" -d "{\"clienteId\":1,\"cargadorId\":1,\"medioPagoId\":1}"
+    @AppMovil
     @POST
     @Path("/iniciar")
     public Response iniciarCarga(IniciarCargaDTO dto) {
@@ -30,6 +32,7 @@ public class CargaAPI {
     }
 
     // curl -X GET http://localhost:8080/LaboratorioJavaEE/gestion/cargas/actual/1
+    @AppMovil
     @GET
     @Path("/actual/{clienteId}")
     public Response verCargaActual(@PathParam("clienteId") Long clienteId) {
@@ -38,6 +41,7 @@ public class CargaAPI {
     }
 
     // curl -X GET "http://localhost:8080/LaboratorioJavaEE/gestion/cargas/historico/1?desde=2026-01-01T00:00:00&hasta=2026-12-31T23:59:59"
+    @AppMovil
     @GET
     @Path("/historico/{clienteId}")
     public Response verHistorico(@PathParam("clienteId") Long clienteId,
@@ -76,6 +80,7 @@ public class CargaAPI {
     }
 
     // curl -X GET http://localhost:8080/LaboratorioJavaEE/gestion/cargas/estaciones
+    @AppMovil
     @GET
     @Path("/estaciones")
     public Response obtenerEstaciones() {

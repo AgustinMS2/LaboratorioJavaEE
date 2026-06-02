@@ -7,6 +7,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tallerJava.moduloClientes.aplicacion.ServicioCliente;
 import org.tallerJava.moduloClientes.dominio.*;
+import org.tallerJava.moduloClientes.infraestructura.seguridad.AppMovil;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ public class ClienteAPI {
     }
 
     // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/clientes/1/mediosPago -H "Content-Type: application/json" -d "{\"tipo\":\"TARJETA\",\"numero\":\"1234567890123456\",\"fechaVencimiento\":\"2027-01-01\",\"digitoVerificacion\":\"123\",\"tipoTarjeta\":\"CREDITO\"}"
+    @AppMovil
     @POST
     @Path("/{id}/mediosPago")
     public Response altaMedioPago(@PathParam("id") Long clienteId, MedioPagoDTO dto) {
@@ -60,6 +62,7 @@ public class ClienteAPI {
     }
 
     // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/clientes/1/reclamos -H "Content-Type: application/json" -d "\"El cargador no funcionaba correctamente\""
+    @AppMovil
     @POST
     @Path("/{id}/reclamos")
     public Response realizarReclamo(@PathParam("id") Long clienteId, String comentario) {
