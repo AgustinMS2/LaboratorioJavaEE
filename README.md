@@ -11,14 +11,21 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
 3. [Estructura de paquetes](#estructura-de-paquetes)
 4. [Modelo de dominio](#modelo-de-dominio)
 5. [Módulos y casos de uso](#módulos-y-casos-de-uso)
-6. [Configuración del entorno](#configuración-del-entorno)
+6. [Iteración 2 — Integración con sistemas externos](#iteración-2--integración-con-sistemas-externos)
+   - [Esquema de integración](#esquema-de-integración)
+   - [APIs que se exponen](#apis-que-se-exponen)
+   - [Autenticación App Móvil](#autenticación-app-móvil)
+   - [APIs que se consumen](#apis-que-se-consumen)
+   - [Pago rechazado y deuda pendiente](#pago-rechazado-y-deuda-pendiente)
+   - [Manejo de errores REST](#manejo-de-errores-rest)
+7. [Configuración del entorno](#configuración-del-entorno)
    - [Linux](#linux)
    - [Windows](#windows)
-7. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
-8. [Tecnologías](#tecnologías)
-9. [Mocks de sistemas externos](#mocks-de-sistemas-externos)
-10. [Rate Limiter](#rate-limiter)
-11. [Problemas frecuentes](#problemas-frecuentes)
+8. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
+9. [Tecnologías](#tecnologías)
+10. [Mocks de sistemas externos](#mocks-de-sistemas-externos)
+11. [Rate Limiter](#rate-limiter)
+12. [Problemas frecuentes](#problemas-frecuentes)
 
 ---
 
@@ -161,6 +168,189 @@ org.tallerJava
 |---|---|---|
 | `pagarCarga(clienteId, cargaId, importe, medioPagoId)` | Cobra la carga usando el medio de pago del cliente | Módulo Cargas |
 | `consultarPagos(clienteId, desde, hasta)` | Lista los pagos del cliente en el rango de fechas | Gestor web |
+
+---
+
+## Iteración 2 — Integración con sistemas externos
+
+En esta iteración el sistema se conecta al exterior: expone sus servicios a distintos actores mediante APIs REST y consume servicios externos para procesar los pagos.
+
+---
+
+### Esquema de integración
+
+```mermaid
+flowchart LR
+    subgraph Actores
+        AM[App Móvil]
+        CA[Cargador]
+        GW[Gestor Web]
+    end
+
+    subgraph GestorMovilidad Core
+        API[API REST]
+    end
+
+    subgraph Sistemas externos
+        MP[ServicioMedioPagoMock]
+        UTE[FacturaUTEMock]
+    end
+
+    AM -->|Basic Auth\nHTTP| API
+    CA -->|HTTP| API
+    GW -->|HTTP| API
+
+    API -->|POST /pagos/autorizar\nTarjeta de crédito| MP
+    API -->|POST /factura-ute/notificar-pago\nCuenta UTE| UTE
+```
+
+El sistema cumple dos roles simultáneamente:
+- **Servidor**: expone APIs REST consumidas por el Cargador, la App Móvil y el Gestor Web.
+- **Cliente**: consume las APIs REST de los sistemas externos de pago.
+
+---
+
+### APIs que se exponen
+
+#### Para el Cargador
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `POST` | `/gestion/cargas/finalizar` | Notifica que la carga finalizó; dispara el cobro automáticamente |
+
+#### Para el Gestor Web
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `POST` | `/gestion/cargas/estaciones` | Da de alta una estación de carga |
+| `POST` | `/gestion/cargas/estaciones/{id}/cargadores` | Asocia un cargador a una estación |
+| `GET`  | `/gestion/clientes` | Lista todos los clientes registrados |
+| `GET`  | `/gestion/pagos/{clienteId}?desde=&hasta=` | Consulta pagos del cliente por rango de fechas |
+
+#### Para la App Móvil
+
+Todos los endpoints de la app móvil requieren autenticación Basic Auth (ver sección siguiente).
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `POST` | `/gestion/clientes` | Registro de nuevo cliente (no requiere auth) |
+| `POST` | `/gestion/clientes/{id}/mediosPago` | Asocia un medio de pago al cliente |
+| `POST` | `/gestion/clientes/{id}/reclamos` | Registra un reclamo |
+| `POST` | `/gestion/cargas/iniciar` | Inicia una sesión de carga |
+| `GET`  | `/gestion/cargas/actual/{clienteId}` | Consulta el estado de la carga activa |
+| `GET`  | `/gestion/cargas/historico/{clienteId}?desde=&hasta=` | Histórico de cargas (protegido por rate limiter) |
+| `GET`  | `/gestion/cargas/estaciones` | Lista estaciones y cargadores disponibles |
+| `POST` | `/gestion/pagos/{clienteId}/pagar-deuda` | Salda una deuda pendiente por pago rechazado |
+
+---
+
+### Autenticación App Móvil
+
+Los endpoints de la App Móvil están protegidos con **HTTP Basic Authentication**. Cada request debe incluir el header:
+
+```
+Authorization: Basic <base64(cedula:contraseña)>
+```
+
+**Ejemplo:**
+
+```bash
+# cedula: 12345678 / contraseña: pass123
+curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/cargas/iniciar \
+  -H "Authorization: Basic MTIzNDU2Nzg6cGFzczEyMw==" \
+  -H "Content-Type: application/json" \
+  -d '{"clienteId":1,"cargadorId":1,"medioPagoId":1}'
+```
+
+Un request sin credenciales o con credenciales inválidas recibe `401 Unauthorized`.
+
+El mecanismo está implementado como un `ContainerRequestFilter` (`FiltroAutenticacion`) que se activa mediante la anotación `@AppMovil` aplicada a cada endpoint protegido.
+
+---
+
+### APIs que se consumen
+
+Al finalizar una carga, el sistema invoca automáticamente al servicio de pago correspondiente según el medio de pago utilizado.
+
+#### Servicio de Medio de Pago (tarjeta)
+
+| Campo | Valor |
+|---|---|
+| Endpoint | `POST http://localhost:8080/ServicioMedioPagoMock-1.0.0/api/pagos/autorizar` |
+| Body | `{ "idCliente": "1", "numeroTarjeta": "4111111111111111", "monto": 10.50 }` |
+| Respuesta aprobada | HTTP 200 `{ "estado": "APROBADO" }` |
+| Respuesta rechazada | HTTP 402 `{ "estado": "RECHAZADO" }` |
+
+Para saldar una deuda pendiente:
+
+| Campo | Valor |
+|---|---|
+| Endpoint | `POST http://localhost:8080/ServicioMedioPagoMock-1.0.0/api/pagos/deuda/pagar` |
+| Body | `{ "numeroTarjeta": "4000000000000002" }` |
+
+**Tarjetas de prueba:**
+
+| Número | Comportamiento |
+|---|---|
+| `4111111111111111` | Siempre aprobada |
+| `4000000000000002` | Siempre rechazada |
+| Cualquier otro | Aleatorio, ratio 5:1 a favor del aprobado |
+
+#### Servicio de Factura UTE (cuenta UTE)
+
+| Campo | Valor |
+|---|---|
+| Endpoint | `POST http://localhost:8080/FacturaUTEMock/api/factura-ute/notificar-pago` |
+| Body | `{ "clienteId": 1, "cargaId": 1, "numeroCuenta": "UTE-12345", "importe": 10.50 }` |
+| Respuesta | Siempre HTTP 200 `{ "estado": "CONFIRMADO", "codigoUTE": "..." }` |
+
+---
+
+### Pago rechazado y deuda pendiente
+
+Cuando el servicio de Medio de Pago rechaza el cobro de una tarjeta, el pago queda registrado con estado `RECHAZADO`. A partir de ese momento el cliente **no puede iniciar una nueva carga** hasta que salde la deuda.
+
+**Flujo:**
+
+```
+1. finalizarCarga()
+       → mock rechaza la tarjeta
+       → Pago.estado = "RECHAZADO"
+
+2. iniciarCarga()  (cualquier tarjeta)
+       → verifica deuda pendiente → bloqueado (HTTP 409)
+
+3. POST /gestion/pagos/{clienteId}/pagar-deuda
+       → llama a mock POST /pagos/deuda/pagar
+       → Pago.estado = "SALDADO"
+
+4. iniciarCarga()  → permitido nuevamente
+```
+
+**Estados posibles de un Pago:**
+
+| Estado | Descripción |
+|---|---|
+| `APROBADO` | Cobro con tarjeta exitoso |
+| `RECHAZADO` | Tarjeta rechazada; cliente bloqueado |
+| `SALDADO` | Deuda pagada; cliente desbloqueado |
+| `PROCESADO` | Cobrado vía factura UTE |
+
+---
+
+### Manejo de errores REST
+
+Un `ExceptionMapper` global convierte las excepciones del dominio en respuestas HTTP con cuerpo JSON:
+
+| Excepción | HTTP | Ejemplo |
+|---|---|---|
+| `IllegalStateException` | `409 Conflict` | Cliente bloqueado por deuda, carga ya activa |
+| `IllegalArgumentException` | `400 Bad Request` | Entidad no encontrada, dato inválido |
+| Cualquier otra | `500 Internal Server Error` | Error inesperado |
+
+```json
+{ "error": "El cliente tiene un pago rechazado pendiente. Debe saldar la deuda antes de iniciar una nueva carga." }
+```
 
 ---
 
