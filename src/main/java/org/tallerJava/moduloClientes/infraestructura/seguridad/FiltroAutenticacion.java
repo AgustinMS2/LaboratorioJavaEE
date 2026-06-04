@@ -7,6 +7,7 @@ import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
+import org.mindrot.jbcrypt.BCrypt;
 import org.tallerJava.moduloClientes.dominio.Cliente;
 import org.tallerJava.moduloClientes.dominio.repositorio.ClienteRepositorio;
 
@@ -44,7 +45,7 @@ public class FiltroAutenticacion implements ContainerRequestFilter {
 
         Optional<Cliente> cliente = clienteRepositorio.buscarPorCedula(cedula);
 
-        if (cliente.isEmpty() || !contrasena.equals(cliente.get().getContrasena())) {
+        if (cliente.isEmpty() || !BCrypt.checkpw(contrasena, cliente.get().getContrasena())) {
             rechazar(ctx);
         }
     }

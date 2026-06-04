@@ -3,6 +3,7 @@ package org.tallerJava.moduloClientes.aplicacion.impl;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.mindrot.jbcrypt.BCrypt;
 import org.tallerJava.moduloClientes.aplicacion.ServicioCliente;
 import org.tallerJava.moduloClientes.dominio.Cliente;
 import org.tallerJava.moduloClientes.dominio.MedioPago;
@@ -28,6 +29,7 @@ public class ServicioClienteImpl implements ServicioCliente {
         clienteRepositorio.buscarPorCedula(cliente.getCedula()).ifPresent(c -> {
             throw new IllegalArgumentException("Ya existe un cliente con la cédula: " + cliente.getCedula());
         });
+        cliente.setContrasena(BCrypt.hashpw(cliente.getContrasena(), BCrypt.gensalt()));
         return clienteRepositorio.guardar(cliente);
     }
 
