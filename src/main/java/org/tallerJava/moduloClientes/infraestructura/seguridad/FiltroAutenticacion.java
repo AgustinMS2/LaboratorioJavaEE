@@ -47,7 +47,10 @@ public class FiltroAutenticacion implements ContainerRequestFilter {
 
         if (cliente.isEmpty() || !BCrypt.checkpw(contrasena, cliente.get().getContrasena())) {
             rechazar(ctx);
+            return;
         }
+
+        ctx.setProperty("clienteAutenticadoId", cliente.get().getId());
     }
 
     private void rechazar(ContainerRequestContext ctx) {

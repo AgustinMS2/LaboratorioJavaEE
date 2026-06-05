@@ -3,6 +3,8 @@ package org.tallerJava.moduloCargas.interfase.remota.rest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tallerJava.moduloCargas.aplicacion.ServicioCarga;
@@ -26,7 +28,10 @@ public class CargaAPI {
     @AppMovil
     @POST
     @Path("/iniciar")
-    public Response iniciarCarga(IniciarCargaDTO dto) {
+    public Response iniciarCarga(IniciarCargaDTO dto, @Context ContainerRequestContext ctx) {
+        if (!dto.clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
         Carga carga = servicioCarga.iniciarCarga(dto.clienteId, dto.cargadorId, dto.medioPagoId);
         return Response.status(Response.Status.CREATED).entity(CargaDTO.from(carga)).build();
     }
@@ -35,7 +40,10 @@ public class CargaAPI {
     @AppMovil
     @GET
     @Path("/actual/{clienteId}")
-    public Response verCargaActual(@PathParam("clienteId") Long clienteId) {
+    public Response verCargaActual(@PathParam("clienteId") Long clienteId, @Context ContainerRequestContext ctx) {
+        if (!clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
         Carga carga = servicioCarga.verCargaActual(clienteId);
         return Response.ok(CargaDTO.from(carga)).build();
     }
@@ -46,7 +54,11 @@ public class CargaAPI {
     @Path("/historico/{clienteId}")
     public Response verHistorico(@PathParam("clienteId") Long clienteId,
                                  @QueryParam("desde") String desde,
-                                 @QueryParam("hasta") String hasta) {
+                                 @QueryParam("hasta") String hasta,
+                                 @Context ContainerRequestContext ctx) {
+        if (!clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
         List<CargaDTO> resultado = new ArrayList<>();
         for (Carga carga : servicioCarga.verHistorico(clienteId, LocalDateTime.parse(desde), LocalDateTime.parse(hasta))) {
             resultado.add(CargaDTO.from(carga));

@@ -3,6 +3,8 @@ package org.tallerJava.moduloPagos.interfase.remota.rest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tallerJava.moduloClientes.infraestructura.seguridad.AppMovil;
@@ -40,7 +42,10 @@ public class PagoAPI {
     @AppMovil
     @POST
     @Path("/{clienteId}/pagar-deuda")
-    public Response pagarDeuda(@PathParam("clienteId") Long clienteId) {
+    public Response pagarDeuda(@PathParam("clienteId") Long clienteId, @Context ContainerRequestContext ctx) {
+        if (!clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
         servicioPago.pagarDeuda(clienteId);
         return Response.ok().build();
     }

@@ -3,6 +3,8 @@ package org.tallerJava.moduloClientes.interfase.remota.rest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tallerJava.moduloClientes.aplicacion.ServicioCliente;
@@ -50,7 +52,10 @@ public class ClienteAPI {
     @AppMovil
     @POST
     @Path("/{id}/mediosPago")
-    public Response altaMedioPago(@PathParam("id") Long clienteId, MedioPagoDTO dto) {
+    public Response altaMedioPago(@PathParam("id") Long clienteId, MedioPagoDTO dto, @Context ContainerRequestContext ctx) {
+        if (!clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
         MedioPago medioPago;
         if ("CUENTA_UTE".equals(dto.tipo)) {
             medioPago = new CuentaUTE(null, dto.numeroCuenta, dto.titular, dto.direccionServicio);
@@ -65,7 +70,10 @@ public class ClienteAPI {
     @AppMovil
     @POST
     @Path("/{id}/reclamos")
-    public Response realizarReclamo(@PathParam("id") Long clienteId, String comentario) {
+    public Response realizarReclamo(@PathParam("id") Long clienteId, String comentario, @Context ContainerRequestContext ctx) {
+        if (!clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+            return Response.status(Response.Status.FORBIDDEN).build();
+        }
         servicioCliente.realizarReclamo(clienteId, comentario);
         return Response.status(Response.Status.CREATED).build();
     }
