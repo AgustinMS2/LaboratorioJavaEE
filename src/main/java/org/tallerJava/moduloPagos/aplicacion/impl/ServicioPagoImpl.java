@@ -1,6 +1,7 @@
 package org.tallerJava.moduloPagos.aplicacion.impl;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.tallerJava.moduloPagos.aplicacion.ServicioPago;
@@ -9,6 +10,8 @@ import org.tallerJava.moduloPagos.dominio.Pago;
 import org.tallerJava.moduloPagos.dominio.repositorio.PagoRepositorio;
 import org.tallerJava.moduloPagos.infraestructura.integracion.ClienteFacturaUTEHTTP;
 import org.tallerJava.moduloPagos.infraestructura.integracion.ClienteMedioPagoHTTP;
+import org.tallerJava.moduloPagos.interfase.evento.PagoTarjetaEvento;
+import org.tallerJava.moduloPagos.interfase.evento.PagoUTEEvento;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -30,6 +33,12 @@ public class ServicioPagoImpl implements ServicioPago {
     @Inject
     private ClienteFacturaUTEHTTP clienteFacturaUTEHTTP;
 
+    @Inject
+    private Event<PagoTarjetaEvento> pagoTarjetaEvent;
+
+    @Inject
+    private Event<PagoUTEEvento> pagoUTEEvent;
+
     @Override
     public Pago pagarCarga(Long clienteId, Long cargaId, Double importe, Long medioPagoId) {
         ConsultaMedioPago.DatosMedioPago datos = consultaMedioPago.obtener(medioPagoId);
@@ -42,9 +51,13 @@ public class ServicioPagoImpl implements ServicioPago {
                     BigDecimal.valueOf(importe)
             );
             estado = aprobado ? "APROBADO" : "RECHAZADO";
+            if (aprobado) {
+                pagoTarjetaEvent.fire(new PagoTarjetaEvento(clienteId, cargaId));
+            }
         } else if ("CUENTA_UTE".equals(datos.tipo())) {
             clienteFacturaUTEHTTP.notificarPago(clienteId, cargaId, datos.numeroCuenta(), importe);
             estado = "PROCESADO";
+            pagoUTEEvent.fire(new PagoUTEEvento(clienteId, cargaId));
         } else {
             estado = "PROCESADO";
         }

@@ -1,5 +1,6 @@
 package org.tallerJava.moduloPagos;
 
+import jakarta.enterprise.event.Event;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -11,6 +12,8 @@ import org.tallerJava.moduloPagos.dominio.Pago;
 import org.tallerJava.moduloPagos.dominio.repositorio.PagoRepositorio;
 import org.tallerJava.moduloPagos.infraestructura.integracion.ClienteFacturaUTEHTTP;
 import org.tallerJava.moduloPagos.infraestructura.integracion.ClienteMedioPagoHTTP;
+import org.tallerJava.moduloPagos.interfase.evento.PagoTarjetaEvento;
+import org.tallerJava.moduloPagos.interfase.evento.PagoUTEEvento;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +34,12 @@ class ServicioPagoImplTest {
 
     @Mock
     private ClienteFacturaUTEHTTP clienteFacturaUTEHTTP;
+
+    @Mock
+    private Event<PagoTarjetaEvento> pagoTarjetaEvent;
+
+    @Mock
+    private Event<PagoUTEEvento> pagoUTEEvent;
 
     @InjectMocks
     private ServicioPagoImpl servicioPago;

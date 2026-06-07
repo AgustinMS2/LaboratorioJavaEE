@@ -13,6 +13,7 @@ import org.tallerJava.moduloCargas.dominio.repositorio.CargaRepositorio;
 import org.tallerJava.moduloCargas.dominio.repositorio.CargadorRepositorio;
 import org.tallerJava.moduloCargas.dominio.repositorio.EstacionCargaRepositorio;
 import org.tallerJava.moduloCargas.interfase.evento.CargaFinalizadaEvento;
+import org.tallerJava.moduloCargas.interfase.evento.CargaIniciadaEvento;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,6 +35,9 @@ public class ServicioCargaImpl implements ServicioCarga {
     private Event<CargaFinalizadaEvento> cargaFinalizadaEvent;
 
     @Inject
+    private Event<CargaIniciadaEvento> cargaIniciadaEvent;
+
+    @Inject
     private ConsultaDeuda consultaDeuda;
 
     @Override
@@ -53,7 +57,10 @@ public class ServicioCargaImpl implements ServicioCarga {
         cargadorRepositorio.guardar(cargador);
 
         Carga carga = new Carga(clienteId, cargador, medioPagoId);
-        return cargaRepositorio.guardar(carga);
+        cargaRepositorio.guardar(carga);
+
+        cargaIniciadaEvent.fire(new CargaIniciadaEvento(clienteId, carga.getId()));
+        return carga;
     }
 
     @Override
