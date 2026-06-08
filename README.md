@@ -12,20 +12,26 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
 4. [Modelo de dominio](#modelo-de-dominio)
 5. [Módulos y casos de uso](#módulos-y-casos-de-uso)
 6. [Iteración 2 — Integración con sistemas externos](#iteración-2--integración-con-sistemas-externos)
-   - [Esquema de integración](#esquema-de-integración)
-   - [APIs que se exponen](#apis-que-se-exponen)
-   - [Autenticación App Móvil](#autenticación-app-móvil)
-   - [APIs que se consumen](#apis-que-se-consumen)
-   - [Pago rechazado y deuda pendiente](#pago-rechazado-y-deuda-pendiente)
-   - [Manejo de errores REST](#manejo-de-errores-rest)
-7. [Configuración del entorno](#configuración-del-entorno)
-   - [Linux](#linux)
-   - [Windows](#windows)
-8. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
-9. [Tecnologías](#tecnologías)
-10. [Mocks de sistemas externos](#mocks-de-sistemas-externos)
-11. [Rate Limiter](#rate-limiter)
-12. [Problemas frecuentes](#problemas-frecuentes)
+    - [Esquema de integración](#esquema-de-integración)
+    - [APIs que se exponen](#apis-que-se-exponen)
+    - [Autenticación App Móvil](#autenticación-app-móvil)
+    - [APIs que se consumen](#apis-que-se-consumen)
+    - [Pago rechazado y deuda pendiente](#pago-rechazado-y-deuda-pendiente)
+    - [Manejo de errores REST](#manejo-de-errores-rest)
+7. [Iteración 3 — Observabilidad](#arquitectura-de-observabilidad)
+    - [Arquitectura de observabilidad](#arquitectura-de-observabilidad)
+    - [Métricas implementadas](#métricas-implementadas)
+    - [Flujo de eventos](#flujo-de-eventos)
+    - [Configuración del servidor de observabilidad](#configuración-del-servidor-de-observabilidad)
+    - [Dashboard Grafana](#dashboard-grafana)
+8. [Configuración del entorno](#configuración-del-entorno)
+    - [Linux](#linux)
+    - [Windows](#windows)
+9. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
+10. [Tecnologías](#tecnologías)
+11. [Mocks de sistemas externos](#mocks-de-sistemas-externos)
+12. [Rate Limiter](#rate-limiter)
+13. [Problemas frecuentes](#problemas-frecuentes)
 
 ---
 
@@ -112,22 +118,35 @@ org.tallerJava
 │   │   ├── ServicioCarga
 │   │   └── impl / ServicioCargaImpl
 │   ├── interfase
+│   │   └── evento
+│   │       ├── CargaFinalizadaEvento
+│   │       └── CargaIniciadaEvento
 │   └── infraestructura / persistencia
 │       ├── CargaRepositorioImpl
 │       ├── CargadorRepositorioImpl
 │       └── EstacionCargaRepositorioImpl
 │
-└── moduloPagos
-    ├── dominio
-    │   ├── repositorio
-    │   │   └── PagoRepositorio
-    │   └── Pago
-    ├── aplicacion
-    │   ├── ServicioPago
-    │   └── impl / ServicioPagoImpl
-    ├── interfase
-    └── infraestructura / persistencia
-        └── PagoRepositorioImpl
+├── moduloPagos
+│   ├── dominio
+│   │   ├── repositorio
+│   │   │   └── PagoRepositorio
+│   │   └── Pago
+│   ├── aplicacion
+│   │   ├── ServicioPago
+│   │   └── impl / ServicioPagoImpl
+│   ├── interfase
+│   │   └── evento
+│   │       ├── PagoTarjetaEvento
+│   │       └── PagoUTEEvento
+│   └── infraestructura / persistencia
+│       └── PagoRepositorioImpl
+│
+└── moduloMonitoreo
+    ├── infraestructura
+    │   └── RegistradorDeMetricas
+    └── interfase
+        └── evento
+            └── ObserverMonitoreo
 ```
 
 ---
@@ -135,7 +154,6 @@ org.tallerJava
 ## Modelo de dominio
 
 ![Arquitectura modular](docs/diagrama-dominio.png)
-
 
 ---
 
@@ -354,6 +372,115 @@ Un `ExceptionMapper` global convierte las excepciones del dominio en respuestas 
 
 ---
 
+### Arquitectura de observabilidad
+
+El sistema de observabilidad es completamente externo al core y corre en un contenedor Docker independiente. El backend envía métricas hacia InfluxDB usando la librería Micrometer, y Grafana las visualiza consultando InfluxDB.
+
+![Arquitecua_Observabilidad](docs/diagrama-observabilidad.png)
+
+Los módulos de negocio disparan eventos CDI cuando ocurren acciones relevantes, y el moduloMonitoreo los escucha de forma completamente desacoplada, sin que los módulos de negocio conozcan la existencia del monitoreo.
+
+---
+
+### Métricas implementadas
+
+| Métrica | Measurement en InfluxDB | Descripción |
+|---|---|---|
+| Cargas activas | `cargasActivas` | Cantidad de cargas en curso en un momento dado |
+| Cargas realizadas | `cargasRealizadas` | Cantidad acumulada de cargas finalizadas |
+| Pagos con tarjeta | `pagosTarjeta` | Cantidad acumulada de pagos aprobados con tarjeta |
+| Pagos con UTE | `pagosUTE` | Cantidad acumulada de pagos procesados vía factura UTE |
+
+---
+
+### Flujo de eventos
+
+Cuando ocurre una acción en el sistema, el módulo correspondiente dispara un evento CDI que el `ObserverMonitoreo` escucha y registra en InfluxDB:
+
+```
+iniciarCarga()
+    └── fire(CargaIniciadaEvento)
+            └── ObserverMonitoreo.onCargaIniciada()
+                    └── RegistradorDeMetricas.incrementarCounter("cargasActivas")
+
+finalizarCarga()
+    └── fire(CargaFinalizadaEvento)
+            └── ObserverMonitoreo.onCargaFinalizada()
+                    └── RegistradorDeMetricas.incrementarCounter("cargasRealizadas")
+
+pagarCarga() con tarjeta aprobada
+    └── fire(PagoTarjetaEvento)
+            └── ObserverMonitoreo.onPagoTarjeta()
+                    └── RegistradorDeMetricas.incrementarCounter("pagosTarjeta")
+
+pagarCarga() con cuenta UTE
+    └── fire(PagoUTEEvento)
+            └── ObserverMonitoreo.onPagoUTE()
+                    └── RegistradorDeMetricas.incrementarCounter("pagosUTE")
+```
+
+---
+
+### Configuración del servidor de observabilidad
+
+El servidor de observabilidad usa la imagen Docker `philhawthorne/docker-influxdb-grafana` que incluye InfluxDB y Grafana preconfigurados en un mismo contenedor.
+
+**Levantar el contenedor:**
+
+```
+docker run -d --name influxdb-grafana -p 3003:3003 -p 8083:8083 -p 8086:8086 -p 22022:22 philhawthorne/docker-influxdb-grafana:latest
+```
+
+**Para volver a levantarlo en sesiones futuras:**
+
+```
+docker start influxdb-grafana
+```
+
+**Accesos:**
+
+| Herramienta | URL | Credenciales |
+|---|---|---|
+| Grafana | http://localhost:3003 | root / root |
+| Chronograf (admin InfluxDB) | http://localhost:8083 | sin credenciales |
+| InfluxDB API | http://localhost:8086 | sin credenciales |
+
+**Crear la base de datos de métricas** (solo la primera vez, desde Chronograf → Explore):
+
+```sql
+CREATE DATABASE metricasTallerJava
+```
+
+**Configurar Micrometer** (`RegistradorDeMetricas`):
+
+```
+Base de datos : metricasTallerJava
+URL InfluxDB  : http://localhost:8086
+Intervalo     : 10 segundos
+```
+
+---
+
+### Dashboard Grafana
+
+El dashboard `GestorMovilidad` muestra los 4 paneles de métricas en tiempo real con auto-refresh cada 5 segundos.
+
+Para importarlo en una instalación nueva de Grafana:
+
+1. Configurar datasource InfluxDB apuntando a `http://localhost:8086`, base `metricasTallerJava`
+2. Ir a Dashboards → Import → subir el archivo `docs/dashboard-grafana.json`
+
+Los paneles usan las siguientes queries InfluxDB:
+
+| Panel | Query |
+|---|---|
+| Cargas Activas | `SELECT last("value") FROM "cargasActivas"` |
+| Cargas Realizadas | `SELECT last("value") FROM "cargasRealizadas"` |
+| Pagos Tarjeta | `SELECT last("value") FROM "pagosTarjeta"` |
+| Pagos UTE | `SELECT last("value") FROM "pagosUTE"` |
+
+---
+
 ## Configuración del entorno
 
 ### Requisitos
@@ -364,6 +491,7 @@ Un `ExceptionMapper` global convierte las excepciones del dominio en respuestas 
 | Maven | 3.x | |
 | WildFly | 27.0.1 | Se descarga automáticamente |
 | MariaDB | 10.x o superior | Puerto **3307**, usuario `root`, contraseña `root` |
+| Docker | Desktop o Engine | Para el servidor de observabilidad |
 
 > ⚠️ Se usa el puerto **3307** para no chocar con MySQL/MariaDB que usan el 3306 por defecto.
 
@@ -503,6 +631,12 @@ mvn wildfly:run
 
 Los pasos previos (Java 17, MariaDB en el puerto 3307, base `tallerJava`) están detallados en [Configuración del entorno](#configuración-del-entorno).
 
+Para el servidor de observabilidad, levantar el contenedor Docker antes de iniciar el proyecto:
+
+```powershell
+docker start influxdb-grafana
+```
+
 ---
 
 ## Tecnologías
@@ -516,6 +650,10 @@ Los pasos previos (Java 17, MariaDB en el puerto 3307, base `tallerJava`) están
 | MariaDB | 12.2 | Base de datos |
 | CDI | Jakarta | Inyección de dependencias |
 | Maven | 3.x | Build y dependencias |
+| Micrometer | 1.13.0 | Registro de métricas |
+| InfluxDB | incluido en Docker | Repositorio de métricas |
+| Grafana | incluido en Docker | Visualización de métricas |
+| Docker | Desktop | Contenedor de observabilidad |
 
 ---
 
@@ -580,3 +718,6 @@ Se incluye el archivo `PlanPruebasRateLimiter.jmx` para probar el rate limiter c
 
 **`mvn wildfly:run` usa Java incorrecta (Linux)**
 → Exportar `JAVA_HOME` apuntando a OpenJDK 17 (ver sección [Linux](#linux)).
+
+**Las métricas no aparecen en Grafana**
+→ Verificar que el contenedor Docker esté corriendo: `docker ps`. Verificar que la base `metricasTallerJava` exista en InfluxDB (Chronograf → Explore → `SHOW DATABASES`). Las métricas se envían cada 10 segundos, esperar al menos 15 segundos después de realizar una operación.
