@@ -23,6 +23,9 @@ public class FiltroAutenticacion implements ContainerRequestFilter {
     @Inject
     private ClienteRepositorio clienteRepositorio;
 
+    @Inject
+    private ContextoSeguridad contextoSeguridad;
+
     @Override
     public void filter(ContainerRequestContext ctx) throws IOException {
         String authHeader = ctx.getHeaderString(HttpHeaders.AUTHORIZATION);
@@ -50,7 +53,7 @@ public class FiltroAutenticacion implements ContainerRequestFilter {
             return;
         }
 
-        ctx.setProperty("clienteAutenticadoId", cliente.get().getId());
+        contextoSeguridad.setClienteAutenticadoId(cliente.get().getId());
     }
 
     private void rechazar(ContainerRequestContext ctx) {

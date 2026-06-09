@@ -3,13 +3,12 @@ package org.tallerJava.moduloClientes.interfase.remota.rest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.container.ContainerRequestContext;
-import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tallerJava.moduloClientes.aplicacion.ServicioCliente;
 import org.tallerJava.moduloClientes.dominio.*;
 import org.tallerJava.moduloClientes.infraestructura.seguridad.AppMovil;
+import org.tallerJava.moduloClientes.infraestructura.seguridad.ContextoSeguridad;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -23,6 +22,9 @@ public class ClienteAPI {
 
     @Inject
     private ServicioCliente servicioCliente;
+
+    @Inject
+    private ContextoSeguridad contextoSeguridad;
 
     // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/clientes -H "Content-Type: application/json" -d "{\"cedula\":\"12345678\",\"nombreCompleto\":\"Juan Perez\",\"telefono\":\"099123456\",\"contrasena\":\"pass123\",\"tipo\":\"COMUN\"}"
     // curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/clientes -H "Content-Type: application/json" -d "{\"cedula\":\"12345678\",\"nombreCompleto\":\"Juan Perez\",\"telefono\":\"099123456\",\"contrasena\":\"pass123\",\"tipo\":\"PROFESIONAL\",\"tipoProfesional\":\"TAXI\",\"porcentajeDescuento\":10.0}"
@@ -52,8 +54,8 @@ public class ClienteAPI {
     @AppMovil
     @POST
     @Path("/{id}/mediosPago")
-    public Response altaMedioPago(@PathParam("id") Long clienteId, MedioPagoDTO dto, @Context ContainerRequestContext ctx) {
-        if (!clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+    public Response altaMedioPago(@PathParam("id") Long clienteId, MedioPagoDTO dto) {
+        if (!clienteId.equals(contextoSeguridad.getClienteAutenticadoId())) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
         MedioPago medioPago;
@@ -70,8 +72,8 @@ public class ClienteAPI {
     @AppMovil
     @POST
     @Path("/{id}/reclamos")
-    public Response realizarReclamo(@PathParam("id") Long clienteId, String comentario, @Context ContainerRequestContext ctx) {
-        if (!clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+    public Response realizarReclamo(@PathParam("id") Long clienteId, String comentario) {
+        if (!clienteId.equals(contextoSeguridad.getClienteAutenticadoId())) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
         servicioCliente.realizarReclamo(clienteId, comentario);

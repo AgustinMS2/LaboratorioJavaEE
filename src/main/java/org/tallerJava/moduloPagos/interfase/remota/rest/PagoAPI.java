@@ -3,11 +3,10 @@ package org.tallerJava.moduloPagos.interfase.remota.rest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.container.ContainerRequestContext;
-import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.tallerJava.moduloClientes.infraestructura.seguridad.AppMovil;
+import org.tallerJava.moduloClientes.infraestructura.seguridad.ContextoSeguridad;
 import org.tallerJava.moduloPagos.aplicacion.ServicioPago;
 import org.tallerJava.moduloPagos.dominio.Pago;
 
@@ -23,6 +22,9 @@ public class PagoAPI {
 
     @Inject
     private ServicioPago servicioPago;
+
+    @Inject
+    private ContextoSeguridad contextoSeguridad;
 
     // curl -X GET "http://localhost:8080/LaboratorioJavaEE/gestion/pagos/1?desde=2026-01-01T00:00:00&hasta=2026-12-31T23:59:59"
     @GET
@@ -42,8 +44,8 @@ public class PagoAPI {
     @AppMovil
     @POST
     @Path("/{clienteId}/pagar-deuda")
-    public Response pagarDeuda(@PathParam("clienteId") Long clienteId, @Context ContainerRequestContext ctx) {
-        if (!clienteId.equals(ctx.getProperty("clienteAutenticadoId"))) {
+    public Response pagarDeuda(@PathParam("clienteId") Long clienteId) {
+        if (!clienteId.equals(contextoSeguridad.getClienteAutenticadoId())) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
         servicioPago.pagarDeuda(clienteId);
