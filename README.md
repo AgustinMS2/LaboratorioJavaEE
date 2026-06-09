@@ -137,7 +137,8 @@ org.tallerJava
 │   ├── interfase
 │   │   └── evento
 │   │       ├── PagoTarjetaEvento
-│   │       └── PagoUTEEvento
+│   │       ├── PagoUTEEvento
+│   │       └── PagoRechazadoEvento
 │   └── infraestructura / persistencia
 │       └── PagoRepositorioImpl
 │
@@ -372,24 +373,31 @@ Un `ExceptionMapper` global convierte las excepciones del dominio en respuestas 
 
 ---
 
+## Iteración 3 — Observabilidad
+
+En esta iteración se agrega observabilidad al sistema. Los módulos de negocio disparan eventos CDI al ocurrir acciones relevantes, y el `moduloMonitoreo` los registra como métricas en InfluxDB sin que los módulos de negocio conozcan la existencia del monitoreo.
+
+---
+
 ### Arquitectura de observabilidad
 
 El sistema de observabilidad es completamente externo al core y corre en un contenedor Docker independiente. El backend envía métricas hacia InfluxDB usando la librería Micrometer, y Grafana las visualiza consultando InfluxDB.
 
 ![Arquitecua_Observabilidad](docs/diagrama-observabilidad.png)
 
-Los módulos de negocio disparan eventos CDI cuando ocurren acciones relevantes, y el moduloMonitoreo los escucha de forma completamente desacoplada, sin que los módulos de negocio conozcan la existencia del monitoreo.
+Los módulos de negocio disparan eventos CDI cuando ocurren acciones relevantes, y el `moduloMonitoreo` los escucha de forma completamente desacoplada, sin que los módulos de negocio conozcan la existencia del monitoreo.
 
 ---
 
 ### Métricas implementadas
 
-| Métrica | Measurement en InfluxDB | Descripción |
-|---|---|---|
-| Cargas activas | `cargasActivas` | Cantidad de cargas en curso en un momento dado |
-| Cargas realizadas | `cargasRealizadas` | Cantidad acumulada de cargas finalizadas |
-| Pagos con tarjeta | `pagosTarjeta` | Cantidad acumulada de pagos aprobados con tarjeta |
-| Pagos con UTE | `pagosUTE` | Cantidad acumulada de pagos procesados vía factura UTE |
+| Métrica | Measurement en InfluxDB | Tipo | Descripción |
+|---|---|---|---|
+| Cargas activas | `cargasActivas` | Gauge | Cantidad de cargas en curso en un momento dado (sube y baja) |
+| Cargas realizadas | `cargasRealizadas` | Counter | Cantidad acumulada de cargas finalizadas |
+| Pagos con tarjeta | `pagosTarjeta` | Counter | Cantidad acumulada de pagos aprobados con tarjeta |
+| Pagos con UTE | `pagosUTE` | Counter | Cantidad acumulada de pagos procesados vía factura UTE |
+| Pagos rechazados | `pagosRechazados` | Counter | Cantidad acumulada de pagos rechazados con tarjeta |
 
 ---
 
@@ -401,22 +409,23 @@ Cuando ocurre una acción en el sistema, el módulo correspondiente dispara un e
 iniciarCarga()
     └── fire(CargaIniciadaEvento)
             └── ObserverMonitoreo.onCargaIniciada()
-                    └── RegistradorDeMetricas.incrementarCounter("cargasActivas")
+                    └── RegistradorDeMetricas.incrementarCargasActivas()   ← gauge sube
 
 finalizarCarga()
     └── fire(CargaFinalizadaEvento)
-            └── ObserverMonitoreo.onCargaFinalizada()
-                    └── RegistradorDeMetricas.incrementarCounter("cargasRealizadas")
-
-pagarCarga() con tarjeta aprobada
-    └── fire(PagoTarjetaEvento)
-            └── ObserverMonitoreo.onPagoTarjeta()
-                    └── RegistradorDeMetricas.incrementarCounter("pagosTarjeta")
-
-pagarCarga() con cuenta UTE
-    └── fire(PagoUTEEvento)
-            └── ObserverMonitoreo.onPagoUTE()
-                    └── RegistradorDeMetricas.incrementarCounter("pagosUTE")
+            ├── ObserverMonitoreo.onCargaFinalizada()
+            │       ├── RegistradorDeMetricas.decrementarCargasActivas()  ← gauge baja
+            │       └── RegistradorDeMetricas.incrementarCounter("cargasRealizadas")
+            └── CargaFinalizadaObservador → ServicioPago.pagarCarga()
+                    ├── tarjeta aprobada → fire(PagoTarjetaEvento)
+                    │       └── ObserverMonitoreo.onPagoTarjeta()
+                    │               └── RegistradorDeMetricas.incrementarCounter("pagosTarjeta")
+                    ├── tarjeta rechazada → fire(PagoRechazadoEvento)
+                    │       └── ObserverMonitoreo.onPagoRechazado()
+                    │               └── RegistradorDeMetricas.incrementarCounter("pagosRechazados")
+                    └── cuenta UTE → fire(PagoUTEEvento)
+                            └── ObserverMonitoreo.onPagoUTE()
+                                    └── RegistradorDeMetricas.incrementarCounter("pagosUTE")
 ```
 
 ---
@@ -463,12 +472,12 @@ Intervalo     : 10 segundos
 
 ### Dashboard Grafana
 
-El dashboard `GestorMovilidad` muestra los 4 paneles de métricas en tiempo real con auto-refresh cada 5 segundos.
+El dashboard `GestorMovilidad` muestra 5 paneles de métricas en tiempo real con auto-refresh cada 5 segundos, accesible en `http://localhost:3003/d/taller-java-2026/gestormovilidad`.
 
 Para importarlo en una instalación nueva de Grafana:
 
 1. Configurar datasource InfluxDB apuntando a `http://localhost:8086`, base `metricasTallerJava`
-2. Ir a Dashboards → Import → subir el archivo `docs/dashboard-grafana.json`
+2. Ir a Dashboards → Import → subir el archivo `dash-grafana.json` (en la raíz del proyecto)
 
 Los paneles usan las siguientes queries InfluxDB:
 
@@ -478,6 +487,9 @@ Los paneles usan las siguientes queries InfluxDB:
 | Cargas Realizadas | `SELECT last("value") FROM "cargasRealizadas"` |
 | Pagos Tarjeta | `SELECT last("value") FROM "pagosTarjeta"` |
 | Pagos UTE | `SELECT last("value") FROM "pagosUTE"` |
+| Pagos Rechazados con Tarjeta | `SELECT last("value") FROM "pagosRechazados"` |
+
+> **Nota sobre los valores en InfluxDB:** Micrometer publica los counters como **deltas por intervalo** (no acumulados). El valor que aparece en cada punto representa los eventos ocurridos en los últimos 10 segundos. `cargasActivas` es un Gauge y sí refleja el valor absoluto en tiempo real.
 
 ---
 

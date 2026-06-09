@@ -6,6 +6,7 @@ import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import org.tallerJava.moduloCargas.interfase.evento.CargaFinalizadaEvento;
 import org.tallerJava.moduloCargas.interfase.evento.CargaIniciadaEvento;
+import org.tallerJava.moduloPagos.interfase.evento.PagoRechazadoEvento;
 import org.tallerJava.moduloPagos.interfase.evento.PagoTarjetaEvento;
 import org.tallerJava.moduloPagos.interfase.evento.PagoUTEEvento;
 import org.tallerJava.moduloMonitoreo.infraestructura.RegistradorDeMetricas;
@@ -19,11 +20,12 @@ public class ObserverMonitoreo {
 
     public void onCargaIniciada(@Observes CargaIniciadaEvento evento) {
         log.infof("Evento procesado: CargaIniciada cliente %s", evento.getClienteId());
-        registrador.incrementarCounter(RegistradorDeMetricas.CARGAS_ACTIVAS);
+        registrador.incrementarCargasActivas();
     }
 
     public void onCargaFinalizada(@Observes CargaFinalizadaEvento evento) {
         log.infof("Evento procesado: CargaFinalizada cliente %s", evento.getClienteId());
+        registrador.decrementarCargasActivas();
         registrador.incrementarCounter(RegistradorDeMetricas.CARGAS_REALIZADAS);
     }
 
@@ -35,5 +37,10 @@ public class ObserverMonitoreo {
     public void onPagoUTE(@Observes PagoUTEEvento evento) {
         log.infof("Evento procesado: PagoUTE cliente %s", evento.getClienteId());
         registrador.incrementarCounter(RegistradorDeMetricas.PAGOS_UTE);
+    }
+
+    public void onPagoRechazado(@Observes PagoRechazadoEvento evento) {
+        log.infof("Evento procesado: PagoRechazado cliente %s", evento.getClienteId());
+        registrador.incrementarCounter(RegistradorDeMetricas.PAGOS_RECHAZADOS);
     }
 }

@@ -10,6 +10,7 @@ import org.tallerJava.moduloPagos.dominio.Pago;
 import org.tallerJava.moduloPagos.dominio.repositorio.PagoRepositorio;
 import org.tallerJava.moduloPagos.infraestructura.integracion.ClienteFacturaUTEHTTP;
 import org.tallerJava.moduloPagos.infraestructura.integracion.ClienteMedioPagoHTTP;
+import org.tallerJava.moduloPagos.interfase.evento.PagoRechazadoEvento;
 import org.tallerJava.moduloPagos.interfase.evento.PagoTarjetaEvento;
 import org.tallerJava.moduloPagos.interfase.evento.PagoUTEEvento;
 
@@ -39,6 +40,9 @@ public class ServicioPagoImpl implements ServicioPago {
     @Inject
     private Event<PagoUTEEvento> pagoUTEEvent;
 
+    @Inject
+    private Event<PagoRechazadoEvento> pagoRechazadoEvent;
+
     @Override
     public Pago pagarCarga(Long clienteId, Long cargaId, Double importe, Long medioPagoId) {
         ConsultaMedioPago.DatosMedioPago datos = consultaMedioPago.obtener(medioPagoId);
@@ -53,6 +57,8 @@ public class ServicioPagoImpl implements ServicioPago {
             estado = aprobado ? "APROBADO" : "RECHAZADO";
             if (aprobado) {
                 pagoTarjetaEvent.fire(new PagoTarjetaEvento(clienteId, cargaId));
+            } else {
+                pagoRechazadoEvent.fire(new PagoRechazadoEvento(clienteId, cargaId));
             }
         } else if ("CUENTA_UTE".equals(datos.tipo())) {
             clienteFacturaUTEHTTP.notificarPago(clienteId, cargaId, datos.numeroCuenta(), importe);
