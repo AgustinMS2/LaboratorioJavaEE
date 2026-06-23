@@ -16,6 +16,9 @@ public class Reclamo {
 
     private LocalDateTime fecha;
 
+    @Enumerated(EnumType.STRING)
+    private EtiquetaReclamo etiqueta;
+
     public Reclamo() {
     }
 
@@ -33,4 +36,7 @@ public class Reclamo {
 
     public LocalDateTime getFecha() { return fecha; }
     public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
+
+    public EtiquetaReclamo getEtiqueta() { return etiqueta; }
+    public void setEtiqueta(EtiquetaReclamo etiqueta) { this.etiqueta = etiqueta; }
 }

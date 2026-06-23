@@ -37,3 +37,10 @@ connect
     catch
         echo "ServicioMedioPagoMock no encontrado"
     end-try
+    #5to se crea la queue JMS point to point para el procesamiento de reclamos (Iteracion 4)
+    try
+        /subsystem=messaging-activemq/server=default/jms-queue=reclamos:add(entries=["java:/jms/queue/reclamos","java:jboss/exported/jms/queue/reclamos"])
+        echo "Se crea la queue JMS reclamos"
+    catch
+        echo "No se crea la queue, ya existe"
+    end-try

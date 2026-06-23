@@ -19,6 +19,7 @@ public class RegistradorDeMetricas {
     public static final String PAGOS_UTE         = "pagosUTE";
     public static final String PAGOS_TARJETA     = "pagosTarjeta";
     public static final String PAGOS_RECHAZADOS  = "pagosRechazados";
+    public static final String RECLAMOS_NEGATIVOS = "reclamosNegativos";
 
     private MeterRegistry meterRegistry;
     private AtomicInteger cargasActivas;

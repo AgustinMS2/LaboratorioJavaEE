@@ -10,6 +10,8 @@ import org.tallerJava.moduloClientes.dominio.MedioPago;
 import org.tallerJava.moduloClientes.dominio.Reclamo;
 import org.tallerJava.moduloClientes.dominio.repositorio.ClienteRepositorio;
 import org.tallerJava.moduloClientes.dominio.repositorio.MedioPagoRepositorio;
+import org.tallerJava.moduloClientes.dominio.repositorio.ReclamoRepositorio;
+import org.tallerJava.moduloClientes.infraestructura.messaging.ProductorReclamos;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +25,12 @@ public class ServicioClienteImpl implements ServicioCliente {
 
     @Inject
     private MedioPagoRepositorio medioPagoRepositorio;
+
+    @Inject
+    private ReclamoRepositorio reclamoRepositorio;
+
+    @Inject
+    private ProductorReclamos productorReclamos;
 
     @Override
     public Cliente registrarCliente(Cliente cliente) {
@@ -54,7 +62,12 @@ public class ServicioClienteImpl implements ServicioCliente {
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado: " + clienteId));
 
         Reclamo reclamo = new Reclamo(null, comentario, LocalDateTime.now());
+        reclamoRepositorio.guardar(reclamo);
         cliente.agregarReclamo(reclamo);
         clienteRepositorio.guardar(cliente);
+
+        // Procesamiento asincrónico: respondemos rápido al cliente y el
+        // etiquetado (vía LLM) se hace en segundo plano consumiendo la queue.
+        productorReclamos.encolar(reclamo.getId(), comentario);
     }
 }

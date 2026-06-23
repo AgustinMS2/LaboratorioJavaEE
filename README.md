@@ -24,14 +24,20 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
     - [Flujo de eventos](#flujo-de-eventos)
     - [Configuración del servidor de observabilidad](#configuración-del-servidor-de-observabilidad)
     - [Dashboard Grafana](#dashboard-grafana)
-8. [Configuración del entorno](#configuración-del-entorno)
+8. [Iteración 4 — Messaging](#iteración-4--messaging)
+    - [Arquitectura de mensajería](#arquitectura-de-mensajería)
+    - [Configuración de la queue (WildFly)](#configuración-de-la-queue-wildfly)
+    - [Integración con el LLM (Llama2 local vía Ollama)](#integración-con-el-llm-llama2-local-vía-ollama)
+    - [Métrica de monitoreo agregada](#métrica-de-monitoreo-agregada)
+    - [Probar el flujo](#probar-el-flujo)
+9. [Configuración del entorno](#configuración-del-entorno)
     - [Linux](#linux)
     - [Windows](#windows)
-9. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
-10. [Tecnologías](#tecnologías)
-11. [Mocks de sistemas externos](#mocks-de-sistemas-externos)
-12. [Rate Limiter](#rate-limiter)
-13. [Problemas frecuentes](#problemas-frecuentes)
+10. [Cómo correr el proyecto](#cómo-correr-el-proyecto)
+11. [Tecnologías](#tecnologías)
+12. [Mocks de sistemas externos](#mocks-de-sistemas-externos)
+13. [Rate Limiter](#rate-limiter)
+14. [Problemas frecuentes](#problemas-frecuentes)
 
 ---
 
@@ -490,6 +496,97 @@ Los paneles usan las siguientes queries InfluxDB:
 | Pagos Rechazados con Tarjeta | `SELECT last("value") FROM "pagosRechazados"` |
 
 > **Nota sobre los valores en InfluxDB:** Micrometer publica los counters como **deltas por intervalo** (no acumulados). El valor que aparece en cada punto representa los eventos ocurridos en los últimos 10 segundos. `cargasActivas` es un Gauge y sí refleja el valor absoluto en tiempo real.
+
+---
+
+## Iteración 4 — Messaging
+
+En esta iteración se incorpora una **queue de mensajes JMS punto a punto** (Jakarta Messaging) para procesar los reclamos de los clientes de forma **asincrónica**. Cuando un cliente realiza un reclamo respondemos de inmediato que fue aceptado, y el etiquetado (positivo / negativo / neutro) se hace en segundo plano con ayuda de un modelo de lenguaje (LLM). Así no le trasladamos al cliente el tiempo de procesamiento del LLM y desacoplamos temporalmente los componentes.
+
+---
+
+### Arquitectura de mensajería
+
+```
+Cliente ── nuevo reclamo ──▶ ClienteAPI ──▶ ServicioCliente
+                                                 │  (persiste el reclamo, responde 201)
+                                                 └──▶ ProductorReclamos ──▶ [ queue: reclamos ]
+                                                                                   │
+                                                                                   ▼
+                                                                          ConsumidorReclamos (MDB)
+                                                                                   │
+                                                          ┌────────────────────────┴───────────────┐
+                                                          ▼                                          ▼
+                                                  ClienteLLMHTTP (Ollama)                ServicioEtiquetadoReclamo
+                                                  cataloga el reclamo                    guarda etiqueta en BD
+                                                                                         + fire(ReclamoNegativoEvento)
+                                                                                                   │
+                                                                                                   ▼
+                                                                                         ObserverMonitoreo → reclamosNegativos
+```
+
+| Componente | Rol |
+|---|---|
+| `ProductorReclamos` | Encola el reclamo (texto + `reclamoId`) en la queue al recibir el request del cliente |
+| `ConsumidorReclamos` | MDB que consume la queue, clasifica vía LLM y persiste la etiqueta de forma asincrónica |
+| `ClienteLLMHTTP` | Integración HTTP con Ollama (`http://localhost:11434/api/generate`, modelo `llama3.2`) |
+| `ServicioEtiquetadoReclamo` | Persiste la `etiqueta` en el `Reclamo` y dispara `ReclamoNegativoEvento` si es negativo |
+
+El `onMessage` del MDB se marca como `NOT_SUPPORTED` para **no** mantener abierta una transacción JTA durante la llamada al LLM (que demora varios minutos según el documento de referencia). La persistencia de la etiqueta abre su propia transacción corta en `ServicioEtiquetadoReclamo`.
+
+---
+
+### Configuración de la queue (WildFly)
+
+La queue se crea automáticamente al provisionar el servidor desde `config.cli` sobre el subsistema `messaging-activemq` (incluido en `standalone-full.xml`):
+
+```
+/subsystem=messaging-activemq/server=default/jms-queue=reclamos:add(entries=["java:/jms/queue/reclamos","java:jboss/exported/jms/queue/reclamos"])
+```
+
+El productor y el consumidor referencian la queue por su JNDI `java:/jms/queue/reclamos`.
+
+---
+
+### Integración con el LLM (Ollama)
+
+Siguiendo el documento de referencia *"modelo Llama2 local"*, el motor se levanta con Docker. La propia letra sugiere investigar un modelo más liviano y rápido que Llama2, por eso usamos **llama3.2** (≈2 GB vs ≈3.8 GB de llama2, y notablemente más rápido):
+
+```
+docker run -d -p 11434:11434 --name ollama ollama/ollama
+docker exec -it ollama ollama pull llama3.2
+```
+
+`ClienteLLMHTTP` envía el reclamo al endpoint `/api/generate` pidiéndole catalogarlo en una palabra (positivo / negativo / neutro) y mapea la respuesta a la etiqueta. Si el LLM no está disponible, el reclamo se etiqueta como `NEUTRO` (degradación elegante).
+
+El modelo se puede cambiar sin recompilar mediante la variable de entorno `OLLAMA_MODEL` (por defecto `llama3.2`).
+
+> **Nota:** el read timeout del cliente HTTP está fijado en 10 minutos por las dudas; con llama3.2 la clasificación tarda unos pocos segundos.
+
+---
+
+### Métrica de monitoreo agregada
+
+| Métrica | Measurement en InfluxDB | Tipo | Descripción |
+|---|---|---|---|
+| Reclamos negativos | `reclamosNegativos` | Counter | Cantidad acumulada de reclamos catalogados como negativos por el LLM |
+
+Se agregó al dashboard `GestorMovilidad` un panel **"Reclamos Negativos"** (`SELECT last("value") FROM "reclamosNegativos"`) que se importa con el `dash-grafana.json` actualizado.
+
+---
+
+### Probar el flujo
+
+```bash
+# 1. Autenticarse como app móvil y obtener token (ver Iteración 2)
+# 2. Enviar un reclamo
+curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/clientes/1/reclamos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d "\"Hace horas que no puedo cargar, el cargador está roto y nadie me ayuda\""
+# Responde 201 inmediatamente; el etiquetado ocurre en segundo plano.
+```
+
 
 ---
 

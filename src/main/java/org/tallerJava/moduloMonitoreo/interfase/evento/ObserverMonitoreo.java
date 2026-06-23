@@ -9,6 +9,7 @@ import org.tallerJava.moduloCargas.interfase.evento.CargaIniciadaEvento;
 import org.tallerJava.moduloPagos.interfase.evento.PagoRechazadoEvento;
 import org.tallerJava.moduloPagos.interfase.evento.PagoTarjetaEvento;
 import org.tallerJava.moduloPagos.interfase.evento.PagoUTEEvento;
+import org.tallerJava.moduloClientes.interfase.evento.ReclamoNegativoEvento;
 import org.tallerJava.moduloMonitoreo.infraestructura.RegistradorDeMetricas;
 
 @ApplicationScoped
@@ -42,5 +43,10 @@ public class ObserverMonitoreo {
     public void onPagoRechazado(@Observes PagoRechazadoEvento evento) {
         log.infof("Evento procesado: PagoRechazado cliente %s", evento.getClienteId());
         registrador.incrementarCounter(RegistradorDeMetricas.PAGOS_RECHAZADOS);
+    }
+
+    public void onReclamoNegativo(@Observes ReclamoNegativoEvento evento) {
+        log.infof("Evento procesado: ReclamoNegativo reclamo %s", evento.getReclamoId());
+        registrador.incrementarCounter(RegistradorDeMetricas.RECLAMOS_NEGATIVOS);
     }
 }
