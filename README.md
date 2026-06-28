@@ -86,11 +86,15 @@ moduloXxx/
 ```
 org.tallerJava
 │
+├── infraestructura / rest
+│   └── GestionExcepcionesMapper          → ExceptionMapper global
+│
 ├── moduloClientes
 │   ├── dominio
 │   │   ├── repositorio
 │   │   │   ├── ClienteRepositorio
-│   │   │   └── MedioPagoRepositorio
+│   │   │   ├── MedioPagoRepositorio
+│   │   │   └── ReclamoRepositorio        (it. 4)
 │   │   ├── Cliente (abstract)
 │   │   ├── ClienteComun
 │   │   ├── ClienteProfesional
@@ -98,15 +102,32 @@ org.tallerJava
 │   │   ├── Tarjeta
 │   │   ├── CuentaUTE
 │   │   ├── Reclamo
+│   │   ├── EtiquetaReclamo (enum)        (it. 4)
 │   │   ├── TipoProfesional (enum)
 │   │   └── TipoTarjeta (enum)
 │   ├── aplicacion
-│   │   ├── ServicioCliente
-│   │   └── impl / ServicioClienteImpl
+│   │   ├── ServicioCliente / impl
+│   │   └── ServicioEtiquetadoReclamo / impl   (it. 4)
 │   ├── interfase
-│   └── infraestructura / persistencia
-│       ├── ClienteRepositorioImpl
-│       └── MedioPagoRepositorioImpl
+│   │   ├── evento / ReclamoNegativoEvento     (it. 4)
+│   │   └── remota / rest
+│   │       ├── ClienteAPI
+│   │       ├── ClienteDTO
+│   │       └── MedioPagoDTO
+│   └── infraestructura
+│       ├── persistencia
+│       │   ├── ClienteRepositorioImpl
+│       │   ├── MedioPagoRepositorioImpl
+│       │   └── ReclamoRepositorioImpl    (it. 4)
+│       ├── seguridad                     (it. 2)
+│       │   ├── AppMovil (@interface)
+│       │   ├── ContextoSeguridad
+│       │   └── FiltroAutenticacion
+│       ├── adaptador / ConsultaMedioPagoAdapter
+│       ├── messaging                     (it. 4)
+│       │   ├── ProductorReclamos
+│       │   └── ConsumidorReclamos
+│       └── integracion / ClienteLLMHTTP  (it. 4)
 │
 ├── moduloCargas
 │   ├── dominio
@@ -122,32 +143,47 @@ org.tallerJava
 │   │   ├── TipoCargador (enum)
 │   │   └── TipoConector (enum)
 │   ├── aplicacion
-│   │   ├── ServicioCarga
-│   │   └── impl / ServicioCargaImpl
+│   │   ├── ServicioCarga / impl
+│   │   └── puerto / ConsultaDeuda
 │   ├── interfase
-│   │   └── evento
-│   │       ├── CargaFinalizadaEvento
-│   │       └── CargaIniciadaEvento
-│   └── infraestructura / persistencia
-│       ├── CargaRepositorioImpl
-│       ├── CargadorRepositorioImpl
-│       └── EstacionCargaRepositorioImpl
+│   │   ├── evento
+│   │   │   ├── CargaFinalizadaEvento
+│   │   │   └── CargaIniciadaEvento
+│   │   └── remota / rest
+│   │       ├── CargaAPI
+│   │       ├── CargaDTO / CargadorDTO / EstacionDTO
+│   │       └── IniciarCargaDTO / FinalizarCargaDTO
+│   └── infraestructura
+│       ├── persistencia
+│       │   ├── CargaRepositorioImpl
+│       │   ├── CargadorRepositorioImpl
+│       │   └── EstacionCargaRepositorioImpl
+│       └── ratelimiter                   (it. 2)
+│           ├── RateLimiter
+│           └── RateLimiterFiltro
 │
 ├── moduloPagos
 │   ├── dominio
-│   │   ├── repositorio
-│   │   │   └── PagoRepositorio
+│   │   ├── repositorio / PagoRepositorio
 │   │   └── Pago
 │   ├── aplicacion
-│   │   ├── ServicioPago
-│   │   └── impl / ServicioPagoImpl
+│   │   ├── ServicioPago / impl
+│   │   └── puerto / ConsultaMedioPago
 │   ├── interfase
-│   │   └── evento
-│   │       ├── PagoTarjetaEvento
-│   │       ├── PagoUTEEvento
-│   │       └── PagoRechazadoEvento
-│   └── infraestructura / persistencia
-│       └── PagoRepositorioImpl
+│   │   ├── evento
+│   │   │   ├── CargaFinalizadaObservador
+│   │   │   ├── PagoTarjetaEvento
+│   │   │   ├── PagoUTEEvento
+│   │   │   └── PagoRechazadoEvento
+│   │   └── remota / rest
+│   │       ├── PagoAPI
+│   │       └── PagoDTO
+│   └── infraestructura
+│       ├── persistencia / PagoRepositorioImpl
+│       ├── adaptador / ConsultaDeudaAdapter
+│       └── integracion
+│           ├── ClienteMedioPagoHTTP
+│           └── ClienteFacturaUTEHTTP
 │
 └── moduloMonitoreo
     ├── infraestructura
@@ -496,7 +532,7 @@ Intervalo     : 10 segundos
 
 ### Dashboard Grafana
 
-El dashboard `GestorMovilidad` muestra 5 paneles de métricas en tiempo real con auto-refresh cada 5 segundos, accesible en `http://localhost:3003/d/taller-java-2026/gestormovilidad`.
+El dashboard `GestorMovilidad` muestra 6 paneles de métricas en tiempo real con auto-refresh cada 5 segundos, accesible en `http://localhost:3003/d/H6f28BbDk/gestormovilidad`.
 
 Para importarlo en una instalación nueva de Grafana:
 
@@ -512,6 +548,7 @@ Los paneles usan las siguientes queries InfluxDB:
 | Pagos Tarjeta | `SELECT last("value") FROM "pagosTarjeta"` |
 | Pagos UTE | `SELECT last("value") FROM "pagosUTE"` |
 | Pagos Rechazados con Tarjeta | `SELECT last("value") FROM "pagosRechazados"` |
+| Reclamos Negativos | `SELECT last("value") FROM "reclamosNegativos"` _(agregado en la Iteración 4)_ |
 
 > **Nota sobre los valores en InfluxDB:** Micrometer publica los counters como **deltas por intervalo** (no acumulados). El valor que aparece en cada punto representa los eventos ocurridos en los últimos 10 segundos. `cargasActivas` es un Gauge y sí refleja el valor absoluto en tiempo real.
 
@@ -671,7 +708,8 @@ SELECT id, etiqueta, comentario FROM clientes_reclamo ORDER BY id DESC;
 | Maven | 3.x | |
 | WildFly | 27.0.1 | Se descarga automáticamente |
 | MariaDB | 10.x o superior | Puerto **3307**, usuario `root`, contraseña `root` |
-| Docker | Desktop o Engine | Para el servidor de observabilidad |
+| Docker | Desktop o Engine | Para el servidor de observabilidad y el LLM (Ollama) |
+| Ollama | con modelo `llama3.2` | Solo para la Iteración 4 (clasificación de reclamos). Ver [Integración con el LLM](#integración-con-el-llm-ollama) |
 
 > ⚠️ Se usa el puerto **3307** para no chocar con MySQL/MariaDB que usan el 3306 por defecto.
 
@@ -817,6 +855,15 @@ Para el servidor de observabilidad, levantar el contenedor Docker antes de inici
 docker start influxdb-grafana
 ```
 
+Para la Iteración 4 (clasificación de reclamos), levantar también Ollama con el modelo `llama3.2`:
+
+```bash
+docker run -d -p 11434:11434 --name ollama ollama/ollama
+docker exec -it ollama ollama pull llama3.2
+```
+
+Si el LLM no está disponible, la aplicación sigue funcionando y los reclamos se etiquetan como `NEUTRO`.
+
 ---
 
 ## Tecnologías
@@ -829,11 +876,13 @@ docker start influxdb-grafana
 | Hibernate | incluido en WildFly | ORM / JPA |
 | MariaDB | 12.2 | Base de datos |
 | CDI | Jakarta | Inyección de dependencias |
+| Jakarta Messaging (JMS) | 3.x / ActiveMQ Artemis | Queue point to point de reclamos (Iteración 4) |
+| Ollama | llama3.2 | Modelo de lenguaje (LLM) para clasificar reclamos (Iteración 4) |
 | Maven | 3.x | Build y dependencias |
 | Micrometer | 1.13.0 | Registro de métricas |
 | InfluxDB | incluido en Docker | Repositorio de métricas |
 | Grafana | incluido en Docker | Visualización de métricas |
-| Docker | Desktop | Contenedor de observabilidad |
+| Docker | Desktop | Contenedores de observabilidad y LLM (Ollama) |
 
 ---
 
