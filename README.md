@@ -14,7 +14,7 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
 6. [Iteración 2 — Integración con sistemas externos](#iteración-2--integración-con-sistemas-externos)
     - [Esquema de integración](#esquema-de-integración)
     - [APIs que se exponen](#apis-que-se-exponen)
-    - [Autenticación App Móvil](#autenticación-app-móvil)
+    - [Autenticación y autorización App Móvil](#autenticación-y-autorización-app-móvil)
     - [APIs que se consumen](#apis-que-se-consumen)
     - [Pago rechazado y deuda pendiente](#pago-rechazado-y-deuda-pendiente)
     - [Manejo de errores REST](#manejo-de-errores-rest)
@@ -26,8 +26,9 @@ Sistema de gestión de cargas para vehículos eléctricos, desarrollado con Jaka
     - [Dashboard Grafana](#dashboard-grafana)
 8. [Iteración 4 — Messaging](#iteración-4--messaging)
     - [Arquitectura de mensajería](#arquitectura-de-mensajería)
+    - [Desacople temporal (asincronía)](#desacople-temporal-asincronía)
     - [Configuración de la queue (WildFly)](#configuración-de-la-queue-wildfly)
-    - [Integración con el LLM (Llama2 local vía Ollama)](#integración-con-el-llm-llama2-local-vía-ollama)
+    - [Integración con el LLM (Ollama)](#integración-con-el-llm-ollama)
     - [Métrica de monitoreo agregada](#métrica-de-monitoreo-agregada)
     - [Probar el flujo](#probar-el-flujo)
 9. [Configuración del entorno](#configuración-del-entorno)
@@ -269,9 +270,13 @@ Todos los endpoints de la app móvil requieren autenticación Basic Auth (ver se
 
 ---
 
-### Autenticación App Móvil
+### Autenticación y autorización App Móvil
 
-Los endpoints de la App Móvil están protegidos con **HTTP Basic Authentication**. Cada request debe incluir el header:
+Los endpoints de la App Móvil están protegidos en dos niveles: **autenticación** (verificar quién es el cliente) y **autorización** (verificar que solo opere sobre sus propios recursos).
+
+#### Autenticación
+
+Cada request debe incluir credenciales mediante **HTTP Basic Authentication**:
 
 ```
 Authorization: Basic <base64(cedula:contraseña)>
@@ -289,7 +294,20 @@ curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/cargas/iniciar \
 
 Un request sin credenciales o con credenciales inválidas recibe `401 Unauthorized`.
 
-El mecanismo está implementado como un `ContainerRequestFilter` (`FiltroAutenticacion`) que se activa mediante la anotación `@AppMovil` aplicada a cada endpoint protegido.
+El mecanismo está implementado como un `ContainerRequestFilter` (`FiltroAutenticacion`) que se activa mediante la anotación `@AppMovil` aplicada a cada endpoint protegido. El filtro valida la cédula y la contraseña (comparando contra el hash BCrypt almacenado) y, si son correctas, guarda el id del cliente autenticado en un bean CDI `@RequestScoped` (`ContextoSeguridad`), acotado a esa request.
+
+#### Autorización
+
+No alcanza con estar autenticado: cada cliente solo puede operar sobre **sus propios recursos**. Los endpoints que reciben un `clienteId` (o un `id` de cliente) comparan ese valor contra el id autenticado que dejó el filtro en `ContextoSeguridad`; si no coinciden, la operación se rechaza con `403 Forbidden`. Así un cliente autenticado no puede, por ejemplo, iniciar una carga ni leer reclamos en nombre de otro.
+
+```java
+// patrón aplicado en ClienteAPI, CargaAPI y PagoAPI
+if (!clienteId.equals(contextoSeguridad.getClienteAutenticadoId())) {
+    return Response.status(Response.Status.FORBIDDEN).build();
+}
+```
+
+> **Nota:** el id autenticado se propaga del filtro a los endpoints mediante el bean `@RequestScoped` `ContextoSeguridad`. Esto reemplazó un enfoque previo que lo guardaba como propiedad del `ContainerRequestContext` de JAX-RS.
 
 ---
 
@@ -507,22 +525,30 @@ En esta iteración se incorpora una **queue de mensajes JMS punto a punto** (Jak
 
 ### Arquitectura de mensajería
 
-```
-Cliente ── nuevo reclamo ──▶ ClienteAPI ──▶ ServicioCliente
-                                                 │  (persiste el reclamo, responde 201)
-                                                 └──▶ ProductorReclamos ──▶ [ queue: reclamos ]
-                                                                                   │
-                                                                                   ▼
-                                                                          ConsumidorReclamos (MDB)
-                                                                                   │
-                                                          ┌────────────────────────┴───────────────┐
-                                                          ▼                                          ▼
-                                                  ClienteLLMHTTP (Ollama)                ServicioEtiquetadoReclamo
-                                                  cataloga el reclamo                    guarda etiqueta en BD
-                                                                                         + fire(ReclamoNegativoEvento)
-                                                                                                   │
-                                                                                                   ▼
-                                                                                         ObserverMonitoreo → reclamosNegativos
+El productor y el consumidor están desacoplados por la queue: el flujo del cliente termina apenas el mensaje se encola, y el etiquetado con el LLM ocurre después en un hilo del consumidor (MDB).
+
+```mermaid
+flowchart LR
+    AM[App Móvil] -->|nuevo reclamo\nBasic Auth| API[ClienteAPI]
+    API --> SC[ServicioCliente]
+
+    subgraph Productor
+        SC -->|persiste reclamo\nresponde 201| DB[(MariaDB)]
+        SC --> PR[ProductorReclamos]
+    end
+
+    PR -->|send texto + reclamoId| Q[[queue: reclamos]]
+
+    subgraph Consumidor asincrónico
+        Q --> CR[ConsumidorReclamos MDB]
+        CR -->|clasificar| LLM[ClienteLLMHTTP]
+        CR --> SE[ServicioEtiquetadoReclamo]
+        SE -->|guarda etiqueta| DB
+        SE -->|si NEGATIVO| EV[fire ReclamoNegativoEvento]
+    end
+
+    LLM -->|POST /api/generate| OL[(Ollama / llama3.2)]
+    EV --> OM[ObserverMonitoreo] -->|reclamosNegativos| INF[(InfluxDB)]
 ```
 
 | Componente | Rol |
@@ -532,7 +558,34 @@ Cliente ── nuevo reclamo ──▶ ClienteAPI ──▶ ServicioCliente
 | `ClienteLLMHTTP` | Integración HTTP con Ollama (`http://localhost:11434/api/generate`, modelo `llama3.2`) |
 | `ServicioEtiquetadoReclamo` | Persiste la `etiqueta` en el `Reclamo` y dispara `ReclamoNegativoEvento` si es negativo |
 
-El `onMessage` del MDB se marca como `NOT_SUPPORTED` para **no** mantener abierta una transacción JTA durante la llamada al LLM (que demora varios minutos según el documento de referencia). La persistencia de la etiqueta abre su propia transacción corta en `ServicioEtiquetadoReclamo`.
+El `onMessage` del MDB se marca como `NOT_SUPPORTED` para **no** mantener abierta una transacción JTA durante la llamada al LLM (que puede demorar). La persistencia de la etiqueta abre su propia transacción corta en `ServicioEtiquetadoReclamo`.
+
+---
+
+### Desacople temporal (asincronía)
+
+El siguiente diagrama de secuencia muestra por qué el cliente no paga el costo de procesamiento del LLM: la respuesta `201` se devuelve apenas el mensaje entra a la queue, y el etiquetado sucede después.
+
+```mermaid
+sequenceDiagram
+    participant C as App Móvil
+    participant A as ClienteAPI
+    participant Q as queue reclamos
+    participant M as ConsumidorReclamos
+    participant L as Ollama (LLM)
+    participant D as MariaDB
+
+    C->>A: POST /clientes/{id}/reclamos
+    A->>D: persiste Reclamo
+    A->>Q: encola (texto + reclamoId)
+    A-->>C: 201 Created (inmediato)
+    Note over C,A: el cliente ya recibió respuesta
+
+    Q->>M: entrega mensaje (asincrónico)
+    M->>L: clasificar reclamo
+    L-->>M: positivo / negativo / neutro
+    M->>D: guarda etiqueta
+```
 
 ---
 
@@ -571,22 +624,40 @@ El modelo se puede cambiar sin recompilar mediante la variable de entorno `OLLAM
 |---|---|---|---|
 | Reclamos negativos | `reclamosNegativos` | Counter | Cantidad acumulada de reclamos catalogados como negativos por el LLM |
 
+Reutilizando el mecanismo de eventos CDI de la Iteración 3, el consumidor dispara un evento solo cuando el reclamo resulta negativo, y el `ObserverMonitoreo` lo registra en InfluxDB:
+
+```
+ConsumidorReclamos.onMessage()
+    └── ClienteLLMHTTP.clasificar()
+            └── ServicioEtiquetadoReclamo.etiquetar()
+                    ├── guarda Reclamo.etiqueta en la BD
+                    └── etiqueta == NEGATIVO → fire(ReclamoNegativoEvento)
+                            └── ObserverMonitoreo.onReclamoNegativo()
+                                    └── RegistradorDeMetricas.incrementarCounter("reclamosNegativos")
+```
+
 Se agregó al dashboard `GestorMovilidad` un panel **"Reclamos Negativos"** (`SELECT last("value") FROM "reclamosNegativos"`) que se importa con el `dash-grafana.json` actualizado.
 
 ---
 
 ### Probar el flujo
 
+Los endpoints de reclamos requieren **Basic Auth** (ver Iteración 2). El header es `Authorization: Basic <base64(cedula:contraseña)>`:
+
 ```bash
-# 1. Autenticarse como app móvil y obtener token (ver Iteración 2)
-# 2. Enviar un reclamo
+# cedula: 12345678 / contraseña: pass123
 curl -X POST http://localhost:8080/LaboratorioJavaEE/gestion/clientes/1/reclamos \
+  -H "Authorization: Basic MTIzNDU2Nzg6cGFzczEyMw==" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -d "\"Hace horas que no puedo cargar, el cargador está roto y nadie me ayuda\""
-# Responde 201 inmediatamente; el etiquetado ocurre en segundo plano.
+  -d '"Hace horas que no puedo cargar, el cargador está roto y nadie me ayuda"'
+# Responde 201 inmediatamente; el etiquetado con el LLM ocurre en segundo plano.
 ```
 
+Luego puede verificarse la etiqueta asignada consultando la base:
+
+```sql
+SELECT id, etiqueta, comentario FROM clientes_reclamo ORDER BY id DESC;
+```
 
 ---
 
