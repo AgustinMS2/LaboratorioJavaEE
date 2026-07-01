@@ -1,0 +1,678 @@
+{
+  "info": {
+    "_postman_id": "b13d00e8-cb4e-4f14-a8bc-b925d98dc174",
+    "name": "TallerJava - GestorMovilidad API",
+    "description": "Base URL por defecto: http://localhost:8080/LaboratorioJavaEE/gestion\n\nAutenticacion: los endpoints marcados con @AppMovil requieren Basic Auth con cedula:contrasena de un cliente ya registrado. El filtro FiltroAutenticacion valida esas credenciales contra la base y setea el cliente autenticado en el contexto de seguridad.\n\nFlujo sugerido:\n1. Clientes > Registrar cliente comun (guarda clienteId automaticamente)\n2. Configurar variables cedula/contrasena con las del cliente creado\n3. Clientes > Alta medio de pago\n4. Cargas > Alta estacion y Alta cargador (no requieren auth)\n5. Cargas > Iniciar carga\n6. Cargas > Finalizar carga\n7. Pagos > Consultar pagos / Pagar deuda",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": null,
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/LaboratorioJavaEE/gestion",
+      "type": "string"
+    },
+    {
+      "key": "cedula",
+      "value": "12345678",
+      "type": "string"
+    },
+    {
+      "key": "contrasena",
+      "value": "pass123",
+      "type": "string"
+    },
+    {
+      "key": "clienteId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "medioPagoId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "estacionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "cargadorId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "cargaId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "Registrar cliente comun",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes"
+              ]
+            },
+            "description": "Crea un cliente comun. Guarda automaticamente el id devuelto en la variable de coleccion clienteId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"{{cedula}}\",\n  \"nombreCompleto\": \"Juan Perez\",\n  \"telefono\": \"099123456\",\n  \"contrasena\": \"{{contrasena}}\",\n  \"tipo\": \"COMUN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"clienteId\", jsonData.id);",
+                  "}",
+                  "pm.test(\"Status 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar cliente profesional",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes"
+              ]
+            },
+            "description": "Crea un cliente de tipo profesional (con descuento).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cedula\": \"87654321\",\n  \"nombreCompleto\": \"Maria Gomez\",\n  \"telefono\": \"099654321\",\n  \"contrasena\": \"pass456\",\n  \"tipo\": \"PROFESIONAL\",\n  \"tipoProfesional\": \"TAXI\",\n  \"porcentajeDescuento\": 10.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Obtener clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/clientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes"
+              ]
+            },
+            "description": "Lista todos los clientes registrados."
+          },
+          "response": []
+        },
+        {
+          "name": "Alta medio de pago (tarjeta)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes/{{clienteId}}/mediosPago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes",
+                "{{clienteId}}",
+                "mediosPago"
+              ]
+            },
+            "description": "Requiere Basic Auth (cedula/contrasena del cliente autenticado). El clienteId del path debe coincidir con el cliente autenticado, sino devuelve 403.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"TARJETA\",\n  \"numero\": \"1234567890123456\",\n  \"fechaVencimiento\": \"2027-01-01\",\n  \"digitoVerificacion\": \"123\",\n  \"tipoTarjeta\": \"CREDITO\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{cedula}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{contrasena}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Alta medio de pago (cuenta UTE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes/{{clienteId}}/mediosPago",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes",
+                "{{clienteId}}",
+                "mediosPago"
+              ]
+            },
+            "description": "Requiere Basic Auth. Alta de medio de pago tipo cuenta UTE.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"CUENTA_UTE\",\n  \"numeroCuenta\": \"123456\",\n  \"titular\": \"Juan Perez\",\n  \"direccionServicio\": \"Rivera 100, Maldonado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{cedula}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{contrasena}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Realizar reclamo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/clientes/{{clienteId}}/reclamos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "clientes",
+                "{{clienteId}}",
+                "reclamos"
+              ]
+            },
+            "description": "Requiere Basic Auth. El body es un string plano (JSON string), no un objeto.",
+            "body": {
+              "mode": "raw",
+              "raw": "\"El cargador no funcionaba correctamente\""
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{cedula}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{contrasena}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pagos",
+      "item": [
+        {
+          "name": "Consultar pagos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pagos/{{clienteId}}?desde=2026-01-01T00:00:00&hasta=2026-12-31T23:59:59",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pagos",
+                "{{clienteId}}"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-01-01T00:00:00"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-12-31T23:59:59"
+                }
+              ]
+            },
+            "description": "No requiere Basic Auth segun el codigo (no tiene @AppMovil)."
+          },
+          "response": []
+        },
+        {
+          "name": "Pagar deuda",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pagos/{{clienteId}}/pagar-deuda",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pagos",
+                "{{clienteId}}",
+                "pagar-deuda"
+              ]
+            },
+            "description": "Requiere Basic Auth. clienteId del path debe coincidir con el autenticado.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{cedula}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{contrasena}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cargas",
+      "item": [
+        {
+          "name": "Alta estacion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cargas/estaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cargas",
+                "estaciones"
+              ]
+            },
+            "description": "No requiere Basic Auth. Guarda automaticamente el id devuelto en estacionId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Estacion Centro\",\n  \"calle\": \"Rivera 100\",\n  \"departamento\": \"Maldonado\",\n  \"longitud\": -34,\n  \"latitud\": -54\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"estacionId\", jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alta cargador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cargas/estaciones/{{estacionId}}/cargadores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cargas",
+                "estaciones",
+                "{{estacionId}}",
+                "cargadores"
+              ]
+            },
+            "description": "No requiere Basic Auth. Guarda automaticamente el id devuelto en cargadorId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"LENTO\",\n  \"tieneCable\": true,\n  \"tipoConector\": \"TIPO2\",\n  \"potenciaMinima\": 7\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"cargadorId\", jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener estaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cargas/estaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cargas",
+                "estaciones"
+              ]
+            },
+            "description": "Requiere Basic Auth (tiene @AppMovil).",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{cedula}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{contrasena}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Iniciar carga",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cargas/iniciar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cargas",
+                "iniciar"
+              ]
+            },
+            "description": "Requiere Basic Auth. clienteId del body debe coincidir con el cliente autenticado. Guarda automaticamente el id devuelto en cargaId.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteId\": \"{{clienteId}}\",\n  \"cargadorId\": \"{{cargadorId}}\",\n  \"medioPagoId\": \"{{medioPagoId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{cedula}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{contrasena}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set(\"cargaId\", jsonData.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ver carga actual",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cargas/actual/{{clienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cargas",
+                "actual",
+                "{{clienteId}}"
+              ]
+            },
+            "description": "Requiere Basic Auth.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{cedula}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{contrasena}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Ver historico de cargas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cargas/historico/{{clienteId}}?desde=2026-01-01T00:00:00&hasta=2026-12-31T23:59:59",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cargas",
+                "historico",
+                "{{clienteId}}"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2026-01-01T00:00:00"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2026-12-31T23:59:59"
+                }
+              ]
+            },
+            "description": "Requiere Basic Auth.",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{cedula}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{contrasena}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Finalizar carga",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cargas/finalizar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cargas",
+                "finalizar"
+              ]
+            },
+            "description": "No requiere Basic Auth (no tiene @AppMovil).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cargadorId\": \"{{cargadorId}}\",\n  \"cargaId\": \"{{cargaId}}\",\n  \"consumoKwh\": 10.5,\n  \"recargo\": 0.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
